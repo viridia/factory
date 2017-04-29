@@ -1,0 +1,25 @@
+{
+  "name": "factory.director",
+  "version": "0.0.1",
+  "description": "Rendering Job Web Interface Server",
+  "main": "src/index.ts",
+  "author": "Talin <viridia@gmail.com>",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "npm run build:live",
+    "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
+  },
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "dotenv": "^4.0.0",
+    "express": "^4.15.2",
+    "typescript": "^2.3.2"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.3",
+    "@types/express": "^4.0.35",
+    "@types/node": "^7.0.14",
+    "nodemon": "^1.11.0",
+    "ts-node": "^3.0.2"
+  }
+}
