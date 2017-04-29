@@ -17,7 +17,7 @@ const compiler = webpack(config);
 const server = new WebpackDevServer(compiler, {
   contentBase: __dirname,
   historyApiFallback: true,
-  // stats: 'errors-only',
+  stats: 'minimal',
   // hot: true,
   inline: true,
   publicPath: '/dist/',

@@ -1,5 +1,5 @@
-import * as express from 'express';
 import * as bodyParser from 'body-parser';
+import * as express from 'express';
 import JobRoutes from './JobRoutes';
 
 export default class App {
@@ -18,12 +18,7 @@ export default class App {
 
   /** Set up routes. */
   private routes(): void {
-    let router = express.Router();
-    router.get('/', (req, res, next) => {
-      res.json({
-        message: 'Hello World!'
-      });
-    });
+    const router = express.Router();
     new JobRoutes().apply(router);
     router.get('*', (req, res, next) => {
       res.status(404);

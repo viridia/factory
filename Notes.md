@@ -45,14 +45,15 @@
   * Job Queue
   * Task Queue
 
-* REST API
-  * GET jobs?project=<id>&user=<id>
-  * GET jobs/<id>
-  * POST jobs
-  * GET tasks/
-  * GET tasks/<id>
+* Recipes
+  * Mandlebrot
 
-* First step:
+* Next steps:
+  * Create JobView react component
+    * JobList
+    * TaskList
+    * TaskStatus
+    * JobSubmissionForm
   x build deployment for rethinkdb
   * create a hello app that can talk to it (without container)
   x probably start with express
