@@ -12,13 +12,22 @@ export interface Job {
   id: number;
 
   /** The id of the user that submitted this job. */
-  user: string;
+  user: number;
+
+  /** The string username of the user. */
+  username: string;
 
   /** The project id. */
   project: number;
 
+  /** The project name. */
+  projectName: string;
+
   /** The asset id. */
   asset: number;
+
+  /** The asset name. */
+  assetName: string;
 
   /** The name of the main input file. */
   mainFileName: string;
@@ -40,4 +49,13 @@ export interface Job {
 
   /** Timestamp when the job completed (either succesfully or not). */
   endedAt: Date;
+
+  /** The total number of tasks needed to run for this job. */
+  tasksTotal: number;
+
+  /** Number of tasks finished. */
+  tasksFinished: number;
+
+  /** Number of tasks that have failed unrecoverably. */
+  tasksFailed: number;
 }

@@ -1,6 +1,10 @@
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
+import config from './config';
 import JobRoutes from './JobRoutes';
+
+// Use require for imports where there is no type library.
+const proxy = require('express-http-proxy');
 
 export default class App {
   public express: express.Application;
@@ -19,10 +23,14 @@ export default class App {
   /** Set up routes. */
   private routes(): void {
     const router = express.Router();
+
+    // Add the router for the jobs API.
     new JobRoutes().apply(router);
-    router.get('*', (req, res, next) => {
-      res.status(404);
-    });
+
+    // Proxy frontend server.
+    router.use('/', proxy(process.env.FRONTEND_PROXY_HOST));
+
+    // Install the router.
     this.express.use(router);
   }
 }

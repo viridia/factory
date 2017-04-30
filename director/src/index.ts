@@ -1,4 +1,5 @@
 import App from './App';
+import config from './config';
 
 const app = new App();
-app.express.listen(8087);
+app.express.listen(config.port);

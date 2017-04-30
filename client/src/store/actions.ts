@@ -1,14 +1,24 @@
 import { Action, createAction } from 'redux-actions';
 import {
   CREATE_JOB,
-  QUERY_JOBS,
-} from './actionTypes';
+  RECEIVE_JOBS_ERROR,
+  RECEIVE_JOBS_LIST,
+  REQUEST_JOBS_LIST,
+  SELECT_JOB,
+} from './actionIds';
 import { Job } from './types/Job';
+import { JobQuery } from './types/JobQuery';
 
 const createJob = createAction<Job>(CREATE_JOB);
-const queryJobs = createAction<Job>(QUERY_JOBS);
+const selectJobs = createAction<JobQuery>(SELECT_JOB);
+const requestJobsList = createAction<undefined>(REQUEST_JOBS_LIST);
+const receiveJobsList = createAction<undefined>(RECEIVE_JOBS_LIST);
+const receiveJobsError = createAction<undefined>(RECEIVE_JOBS_ERROR);
 
 export {
   createJob,
-  queryJobs,
+  selectJobs,
+  requestJobsList,
+  receiveJobsList,
+  receiveJobsError,
 };

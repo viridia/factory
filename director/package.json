@@ -13,12 +13,17 @@
     "body-parser": "^1.17.1",
     "dotenv": "^4.0.0",
     "express": "^4.15.2",
+    "express-http-proxy": "^1.0.1",
+    "rethinkdb": "^2.3.3",
+    "rethinkdb-job-queue": "^3.1.0",
     "typescript": "^2.3.2"
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.3",
+    "@types/dotenv": "^4.0.0",
     "@types/express": "^4.0.35",
     "@types/node": "^7.0.14",
+    "@types/rethinkdb": "^2.3.2",
     "nodemon": "^1.11.0",
     "ts-node": "^3.0.2"
   }

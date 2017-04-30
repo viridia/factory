@@ -1,0 +1,6 @@
+export const GET_JOB = 'GET_JOB';
+export const REQUEST_JOBS_LIST = 'REQUEST_JOBS_LIST';
+export const RECEIVE_JOBS_LIST = 'RECEIVE_JOBS_LIST';
+export const RECEIVE_JOBS_ERROR = 'RECEIVE_JOBS_ERROR';
+export const SELECT_JOB = 'SELECT_JOB';
+export const CREATE_JOB = 'CREATE_JOB';

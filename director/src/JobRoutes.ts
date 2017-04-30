@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import * as express from 'express';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
@@ -28,7 +28,40 @@ export default class JobRoutes {
   }
 
   private queryJobs(req: Request, res: Response, next: NextFunction): void {
-    res.json({ message: 'requesting all jobs.' });
+    res.json([
+      {
+        id: 10,
+        recipe: 'mandlebrot.render',
+        recipeTitle: 'Mandelbrot',
+        mainFileName: 'Mandel.txt',
+        project: 11,
+        projectName: 'Demo Project',
+        asset: 12,
+        assetName: 'Mandel',
+        user: 10,
+        username: 'talin',
+        tasksTotal: 50,
+        tasksFinished: 10,
+        tasksFailed: 1,
+        createdAt: new Date(),
+      },
+      {
+        id: 11,
+        recipe: 'mandlebrot.render',
+        recipeTitle: 'Mandelbrot',
+        mainFileName: 'Mandel.txt',
+        project: 11,
+        projectName: 'Demo Project',
+        asset: 12,
+        assetName: 'Mandel',
+        user: 10,
+        username: 'talin',
+        tasksTotal: 50,
+        tasksFinished: 10,
+        tasksFailed: 1,
+        createdAt: new Date(),
+      },
+    ]);
   }
 
   private createJob(req: Request, res: Response, next: NextFunction): void {

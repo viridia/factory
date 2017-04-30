@@ -16,6 +16,7 @@
     font-weight: bold;
 
     &.page-header {
+      background-color: lightblue;
       margin: 8px 8px 0 8px;
       font-size: 120%;
     }
@@ -37,17 +38,41 @@
       display: flex;
       flex-direction: column;
 
-      > .task-list {
+      > .job-details {
         margin: 8px 8px 0 8px;
         border: 2px solid lightgrey;
         flex: 1;
       }
 
+      > .task-list {
+        margin: 8px 8px 0 8px;
+        border: 2px solid lightgrey;
+        flex: 2;
+      }
+
       > .task-details {
         margin: 8px;
         border: 2px solid lightgrey;
-        flex: 1;
+        flex: 2;
       }
     }
+  }
+
+  .empty-list {
+    padding: 4px;
+    background-color: #ded;
+    text-align: center;
+  }
+
+  .error {
+    padding: 4px;
+    background-color: #faa;
+    text-align: center;
+  }
+
+  .loading {
+    padding: 4px;
+    background-color: #def;
+    text-align: center;
   }
 }
