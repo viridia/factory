@@ -1,9 +1,9 @@
+import { Job } from 'common/types/Job';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
 import { fetchJobs } from '../store/jobsReducer';
-import { Job } from '../store/types/Job';
 import { JobList as JobListState } from '../store/types/JobList';
 import './JobList.scss';
 import JobListEntry from './JobListEntry';

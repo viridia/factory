@@ -1,3 +1,4 @@
+import { Job } from 'common/types/Job';
 import { Action, createAction } from 'redux-actions';
 import {
   CREATE_JOB,
@@ -6,7 +7,6 @@ import {
   REQUEST_JOBS_LIST,
   SELECT_JOB,
 } from './actionIds';
-import { Job } from './types/Job';
 import { JobQuery } from './types/JobQuery';
 
 const createJob = createAction<Job>(CREATE_JOB);

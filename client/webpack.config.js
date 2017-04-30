@@ -23,7 +23,7 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    modules: ['node_modules', 'src'],
+    modules: ['src', 'node_modules'],
   },
   devtool: debug ? 'source-map' : false,
   plugins,

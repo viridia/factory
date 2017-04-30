@@ -1,6 +1,6 @@
+import { Task } from 'common/types/Task';
 import * as Immutable from 'immutable';
 import * as React from 'react';
-import { Task } from '../store/types/Task';
 import './TaskList.scss';
 
 interface TasksListProps {

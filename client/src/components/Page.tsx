@@ -1,6 +1,6 @@
+import { Task } from 'common/types/Task';
 import * as Immutable from 'immutable';
 import * as React from 'react';
-import { Task } from '../store/types/Task';
 import JobList from './JobList';
 import './Page.scss';
 import TaskList from './TaskList';

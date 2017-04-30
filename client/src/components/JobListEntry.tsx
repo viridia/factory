@@ -1,7 +1,7 @@
 import * as classnames from 'classnames';
+import { Job, JobState } from 'common/types/Job';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Job, JobState } from '../store/types/Job';
 // import './JobListEntry.scss';
 
 // Props passed in from parent component
