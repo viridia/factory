@@ -1,5 +1,8 @@
-function greeter(person: string) {
-  console.log(`Hello, ${person}!`);
-}
+// import * as Queue from 'rethinkdb-job-queue';
+export * from 'rethinkdb-job-queue';
 
-greeter('world');
+// function greeter(person: string) {
+//   console.log(`Hello, ${person}!`);
+// }
+//
+// greeter('world');

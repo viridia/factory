@@ -9,7 +9,7 @@ export enum JobState {
 /** Describes a queued render job. */
 export interface Job {
   /** The job id (globally unique). */
-  id: number;
+  id: string;
 
   /** The id of the user that submitted this job. */
   user: number;
@@ -20,14 +20,8 @@ export interface Job {
   /** The project id. */
   project: number;
 
-  /** The project name. */
-  projectName: string;
-
   /** The asset id. */
   asset: number;
-
-  /** The asset name. */
-  assetName: string;
 
   /** The name of the main input file. */
   mainFileName: string;
@@ -35,8 +29,8 @@ export interface Job {
   /** The name of the recipe to execute for this job. */
   recipe: string;
 
-  /** The title of the recipe. */
-  recipeTitle: string;
+  /** Text description of this job. */
+  description: string;
 
   /** The current execution state of the job. */
   state: JobState;
@@ -45,10 +39,10 @@ export interface Job {
   createdAt: Date;
 
   /** Timestamp when the job started running. */
-  startedAt: Date;
+  startedAt?: Date;
 
   /** Timestamp when the job completed (either succesfully or not). */
-  endedAt: Date;
+  endedAt?: Date;
 
   /** The total number of tasks needed to run for this job. */
   tasksTotal: number;

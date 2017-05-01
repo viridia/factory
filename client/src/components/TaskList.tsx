@@ -1,4 +1,4 @@
-import { Task } from 'common/types/Task';
+import { Task } from 'common/types';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import './TaskList.scss';

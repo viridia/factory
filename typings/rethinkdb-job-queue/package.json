@@ -1,0 +1,10 @@
+{
+  "name": "@types/rethinkdb-job-queue",
+  "version": "0.0.5",
+  "description": "Typescript type definitions for rethinkdb-job-queue",
+  "main": "",
+  "author": "Talin <viridia@gmail.com>",
+  "license": "UNLICENSED",
+  "types": "./index.d.ts",
+  "typeScriptVersion": "2.0"
+}

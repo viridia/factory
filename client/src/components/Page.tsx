@@ -1,6 +1,7 @@
-import { Task } from 'common/types/Task';
+import { Task } from 'common/types';
 import * as Immutable from 'immutable';
 import * as React from 'react';
+import JobEntryForm from './JobEntryForm';
 import JobList from './JobList';
 import './Page.scss';
 import TaskList from './TaskList';
@@ -10,20 +11,25 @@ export default class Page extends React.Component<undefined, undefined> {
     return (
       <section className="page">
         <header className="page-header">Render Factory</header>
-        <section className="job-view">
-          <section className="job-list">
-            <header>Jobs</header>
-            <JobList />
+        <section className="status-page">
+          <section className="job-panel">
+            <section className="job-list border-panel">
+              <header>Jobs</header>
+              <JobList />
+            </section>
+            <footer className="job-form border-panel">
+              <JobEntryForm />
+            </footer>
           </section>
           <section className="task-panel">
-            <section className="job-details">
+            <section className="job-details border-panel">
               <header>Job Details</header>
             </section>
-            <section className="task-list">
+            <section className="task-list border-panel">
               <header>Tasks</header>
               <TaskList tasks={Immutable.List<Task>()} />
             </section>
-            <section className="task-details">
+            <section className="task-details border-panel">
               <header>Task Details</header>
             </section>
           </section>

@@ -1,4 +1,4 @@
-import { Job } from 'common/types/Job';
+import { Job } from 'common/types';
 import * as Immutable from 'immutable';
 
 /** Data structure representing the list of jobs queried from the director server. */

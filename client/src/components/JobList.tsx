@@ -1,12 +1,12 @@
-import { Job } from 'common/types/Job';
+import { Job } from 'common/types';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
-import { fetchJobs } from '../store/jobsReducer';
+import { fetchJobs } from '../store/jobsListReducer';
 import { JobList as JobListState } from '../store/types/JobList';
 import './JobList.scss';
-import JobListEntry from './JobListEntry';
+import JobListItem from './JobListItem';
 
 interface JobsListProps {
   jobs: JobListState;
@@ -28,12 +28,13 @@ class JobList extends React.Component<JobsListProps, undefined> {
       return (
         <table className="job-list-table">
           <thead>
-            <th>ID</th>
+            <th width="20%">Created</th>
             <th>User</th>
             <th>File</th>
+            <th width="40%">Progress</th>
           </thead>
           <tbody>
-            {list.map(id => <JobListEntry jobId={id} selected={id === selected} />)}
+            {list.map(id => <JobListItem jobId={id} selected={id === selected} />)}
           </tbody>
         </table>
       );

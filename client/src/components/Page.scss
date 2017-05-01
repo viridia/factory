@@ -8,51 +8,63 @@
   flex-direction: column;
   font-family: sans-serif;
 
-  header {
-    background-color: lightgreen;
+  .page-header {
     text-align: center;
-    margin: 4px;
     padding: 4px;
     font-weight: bold;
-
-    &.page-header {
-      background-color: lightblue;
-      margin: 8px 8px 0 8px;
-      font-size: 120%;
-    }
+    background-color: lightblue;
+    margin: 8px 8px 0 8px;
+    font-size: 120%;
   }
 
-  > .job-view {
+  > .status-page {
     background-color: white;
     flex: 1;
     display: flex;
 
-    > .job-list {
-      margin: 8px 0 8px 8px;
+    .border-panel {
       border: 2px solid lightgrey;
+      margin: 8px 0 0 8px;
+      padding: 4px;
+      &:last-child {
+        margin: 8px 0 8px 8px;
+      }
+
+      > header {
+        background-color: lightgreen;
+        text-align: center;
+        padding: 4px;
+        font-weight: bold;
+      }
+    }
+
+    > .job-panel {
+      display: flex;
+      flex-direction: column;
       flex: 1;
+
+      > .job-list {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
     }
 
     > .task-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
+      margin-right: 8px;
 
       > .job-details {
-        margin: 8px 8px 0 8px;
-        border: 2px solid lightgrey;
         flex: 1;
       }
 
       > .task-list {
-        margin: 8px 8px 0 8px;
-        border: 2px solid lightgrey;
         flex: 2;
       }
 
       > .task-details {
-        margin: 8px;
-        border: 2px solid lightgrey;
         flex: 2;
       }
     }

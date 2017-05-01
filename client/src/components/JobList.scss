@@ -9,6 +9,7 @@
     width: 100%;
     border-collapse: collapse;
     tr {
+      cursor: pointer;
       background-color: #eee;
       &:nth-child(even) {
         background-color: #f7f7f7 ;
@@ -21,6 +22,13 @@
       text-align: left;
       padding: 3px 6px;
       border-width: 0;
+      vertical-align: middle;
+      line-height: 22px;
+      white-space: nowrap;
+    }
+    .job-progress > .progress {
+      margin: 2px;
+      background-color: #ddd;
     }
   }
 }

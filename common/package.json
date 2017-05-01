@@ -1,6 +1,6 @@
 {
   "name": "common",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "Common type definitions shared between projects",
   "main": "index.js",
   "author": "Talin <viridia@gmail.com>",

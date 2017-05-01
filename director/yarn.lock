@@ -34,11 +34,8 @@
   version "7.0.14"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.14.tgz#1470fa002a113316ac9d9ad163fc738c7a0de2a4"
 
-"@types/rethinkdb":
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/@types/rethinkdb/-/rethinkdb-2.3.2.tgz#f5cb0521d1daf63495b34557375978c0f793ec16"
-  dependencies:
-    "@types/node" "*"
+"@types/rethinkdb-job-queue@file:../typings/rethinkdb-job-queue/":
+  version "0.0.5"
 
 "@types/serve-static@*":
   version "1.7.31"
@@ -168,10 +165,6 @@ block-stream@*:
 bluebird@^3.5.0, "bluebird@>= 3.0.1":
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.0.tgz#791420d7f551eea2897453a8a77653f96606d67c"
-
-"bluebird@>= 2.3.2 < 3":
-  version "2.11.0"
-  resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-2.11.0.tgz#534b9033c022c9579c56ba3b3e5a5caafbb650e1"
 
 body-parser:
   version "1.17.1"
@@ -1346,12 +1339,6 @@ request@^2.81.0:
     tunnel-agent "^0.6.0"
     uuid "^3.0.0"
 
-rethinkdb:
-  version "2.3.3"
-  resolved "https://registry.yarnpkg.com/rethinkdb/-/rethinkdb-2.3.3.tgz#3dc6586e22fa1dabee0d254e64bd0e379fad2f72"
-  dependencies:
-    bluebird ">= 2.3.2 < 3"
-
 rethinkdb-job-queue:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/rethinkdb-job-queue/-/rethinkdb-job-queue-3.1.0.tgz#1dd35de78b31aa2108fdfe9331cf66f056e007ae"
@@ -1615,10 +1602,6 @@ type-is@~1.6.14:
   dependencies:
     media-typer "0.3.0"
     mime-types "~2.1.15"
-
-typescript@^2.3.2:
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.3.2.tgz#f0f045e196f69a72f06b25fd3bd39d01c3ce9984"
 
 uid-number@^0.0.6:
   version "0.0.6"

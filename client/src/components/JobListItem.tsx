@@ -1,8 +1,10 @@
 import * as classnames from 'classnames';
-import { Job, JobState } from 'common/types/Job';
+import { Job, JobState } from 'common/types';
+import * as dateformat from 'dateformat';
 import * as React from 'react';
+import { ProgressBar } from 'react-bootstrap';
 import { connect } from 'react-redux';
-// import './JobListEntry.scss';
+// import './JobListItem.scss';
 
 // Props passed in from parent component
 interface DispatchProps {
@@ -11,14 +13,14 @@ interface DispatchProps {
 }
 
 // Props after being transformed by connect().
-interface StateProps {
+interface MappedProps {
   jobId: number;
   job: Job;
   selected: boolean;
 }
 
 /** Displays the current list of jobs. */
-class JobListEntry extends React.Component<StateProps, undefined> {
+class JobListItem extends React.Component<MappedProps, undefined> {
   public render() {
     const { job, selected } = this.props;
     return (
@@ -31,14 +33,20 @@ class JobListEntry extends React.Component<StateProps, undefined> {
             selected,
           })}
       >
-        <td className="id">{job.id}</td>
+        <td className="created">{dateformat(job.createdAt, 'brief')}</td>
         <td className="user">{job.username}</td>
         <td className="file">{job.mainFileName}</td>
+        <td className="job-progress">
+          <ProgressBar>
+            <ProgressBar striped={true} active={true} bsStyle="success" now={50} />
+            <ProgressBar bsStyle="danger" now={10} />
+          </ProgressBar>
+        </td>
       </tr>
     );
   }
 }
 
-export default connect<DispatchProps, StateProps, any>(
+export default connect<DispatchProps, MappedProps, any>(
   (state, ownProps) => ({ ...ownProps, job: state.jobs.byId.get(ownProps.jobId) }),
-)(JobListEntry);
+)(JobListItem);

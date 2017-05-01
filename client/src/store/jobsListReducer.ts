@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { Job } from 'common/types/Job';
+import { Job, JobRequest } from 'common/types';
 import * as Immutable from 'immutable';
 import { Dispatch } from 'redux';
 import { Action, handleAction, handleActions } from 'redux-actions';

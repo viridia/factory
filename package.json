@@ -7,11 +7,15 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/immutable": "^3.8.7",
+    "@types/rethinkdb-job-queue": "file:typings/rethinkdb-job-queue/",
     "tslint": "^5.1.0",
     "tslint-react": "^3.0.0",
     "typescript": "^2.3.2"
   },
   "dependencies": {
-    "immutable": "^3.8.1"
+    "@types/rethinkdb-job-queue": "file:typings/rethinkdb-job-queue",
+    "common": "file:common",
+    "immutable": "^3.8.1",
+    "typescript": "^2.3.2"
   }
 }
