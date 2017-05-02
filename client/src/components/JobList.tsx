@@ -3,13 +3,14 @@ import * as Immutable from 'immutable';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
-import { fetchJobs } from '../store/jobsListReducer';
-import { JobList as JobListState } from '../store/types/JobList';
+import { fetchJobs } from '../store/jobsReducer';
+import { updateProjectSubscriptions } from '../store/subscriptionsReducer';
+import { JobQueryResult } from '../store/types/JobQueryResult';
 import './JobList.scss';
 import JobListItem from './JobListItem';
 
 interface JobsListProps {
-  jobs: JobListState;
+  jobs: JobQueryResult;
   dispatch: Dispatch<{}>;
 }
 
@@ -18,6 +19,12 @@ class JobList extends React.Component<JobsListProps, undefined> {
   public componentWillMount() {
     const { jobs, dispatch } = this.props;
     dispatch(fetchJobs());
+  }
+
+  public componentWillReceiveProps(nextProps: JobsListProps) {
+    console.debug('JobListProps: ', nextProps.jobs.byProject.toJS());
+    const { jobs, dispatch } = nextProps;
+    dispatch(updateProjectSubscriptions(Immutable.Set<number>(jobs.byProject.keySeq())));
   }
 
   public renderListContent() {

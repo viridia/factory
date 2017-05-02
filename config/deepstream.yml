@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    server: deepstream
+  name: deepstream
+spec:
+  type: NodePort
+  ports:
+   - port: 8080
+     targetPort: websocket
+  selector:
+    server: deepstream
+    role: replica
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    server: deepstream
+  name: deepstream-replica
+spec:
+  template:
+    metadata:
+      labels:
+        server: deepstream
+        role: replica
+    spec:
+      containers:
+      - image: deepstreamio/deepstream.io
+        imagePullPolicy: Always
+        name: deepstream
+        ports:
+        - containerPort: 6020
+          name: websocket
+        - containerPort: 6021
+          name: legacy
+        livenessProbe:
+          httpGet:
+            path: /health-check
+            port: websocket
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: websocket

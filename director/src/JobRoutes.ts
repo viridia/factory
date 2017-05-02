@@ -1,5 +1,6 @@
 // import { Job as ApiJob } from 'common/types/Job';
 import { Job, JobRequest, JobState } from 'common/types';
+import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as Queue from 'rethinkdb-job-queue';
 import { JobRecord } from './JobRecord';
@@ -8,9 +9,11 @@ import { JobRecord } from './JobRecord';
 export default class JobRoutes {
   private router: Router;
   private jobQueue: Queue<JobRecord>;
+  private deepstream: deepstreamIO.Client;
 
-  constructor() {
+  constructor(deepstream: deepstreamIO.Client) {
     this.router = Router();
+    this.deepstream = deepstream;
     this.jobQueue = new Queue<JobRecord>({
       host: 'localhost',
       port: 8092,
@@ -18,6 +21,7 @@ export default class JobRoutes {
     }, {
       name: 'JobQueue',
     });
+    this.jobQueue.on('added', this.handleJobAdded.bind(this));
     this.routes();
   }
 
@@ -27,11 +31,16 @@ export default class JobRoutes {
   }
 
   private routes(): void {
+    this.router.get('/config', this.getConfig.bind(this));
     this.router.get('/jobs/:id', this.getJob.bind(this));
     this.router.get('/jobs', this.queryJobs.bind(this));
     this.router.post('/jobs', this.createJob.bind(this));
     this.router.get('/tasks/:id', this.getTask.bind(this));
     this.router.get('/tasks', this.queryTasks.bind(this));
+  }
+
+  private getConfig(req: Request, res: Response, next: NextFunction): void {
+    res.json({ deepstreamHost: '192.168.99.100:32271' });
   }
 
   private getJob(req: Request, res: Response, next: NextFunction): void {
@@ -77,6 +86,15 @@ export default class JobRoutes {
 
   private queryTasks(req: Request, res: Response, next: NextFunction): void {
     res.json({ message: 'requesting all tasks.' });
+  }
+
+  private handleJobAdded(queueId: string, jobId: string) {
+    this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
+      const job = jobs[0];
+      this.deepstream.event.emit(`jobs.project.${job.project}`,
+        { jobsAdded: [this.serializeJob(job)] });
+      console.info('Notification sent');
+    });
   }
 
   private serializeJob(record: JobRecord): Job {

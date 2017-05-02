@@ -29,6 +29,7 @@
   * React / Webpack
 * Pub / Sub
   * deepstream
+  * faye
 
 * Schema:
   * Recipe
@@ -41,20 +42,11 @@
     * Time
     * Message
 
-* Queues:
-  * Job Queue
-  * Task Queue
-
 * Recipes
   * Mandlebrot
 
 * Next steps:
-  * Create JobView react component
-    * JobList
-    * TaskList
-    * TaskStatus
-    * JobSubmissionForm
-  x build deployment for rethinkdb
-  * create a hello app that can talk to it (without container)
-  x probably start with express
+  * pub/sub job creation
+  * job cancellation
   * create a container for the hello app.
+  * TypeScript type definitions for certainty

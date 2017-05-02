@@ -1,31 +1,32 @@
 // Type definitions for rethinkdb-job-queue
 // Project: https://github.com/grantcarthew/node-rethinkdb-job-queue
+import { EventEmitter } from 'events';
 
 interface PredicateFunction<P> {
   (job: P): boolean;
 }
 
-declare class Queue<P extends Queue.Job> {
-  public name: string;
-  public id: string;
-  public host: string;
-  //  get port () { return this._port }
-  public db: string;
+declare class Queue<P extends Queue.Job> extends EventEmitter {
+  public readonly name: string;
+  public readonly id: string;
+  public readonly host: string;
+  public readonly port: number;
+  public readonly db: string;
   //  get r () { return this._r }
-  //  get changeFeed () { return this._changeFeed }
-  //  get master () { return this._masterInterval > 0 }
-  //  get masterInterval () { return this._masterInterval }
-  //  get jobOptions () { return this._jobOptions }
-  //  get limitJobLogs () { return this._limitJobLogs }
-  //  get removeFinishedJobs () { return this._removeFinishedJobs }
-  //  get running () { return this._running }
-  //  get concurrency () { return this._concurrency }
-  public paused: boolean;
-  public idle: boolean;
+  public readonly changeFeed: boolean;
+  public readonly master: boolean;
+  public readonly masterInterval: boolean | number;
+  public jobOptions: Queue.JobOptions;
+  public readonly  removeFinishedJobs: boolean | number;
+  public readonly running: number;
+  public concurrency: number;
+  public readonly paused: boolean;
+  public readonly idle: boolean;
   constructor(cxOptions?: Queue.ConnectionOptions, qOptions?: Queue.QueueOptions);
   public addJob(job: P | [P]): Promise<[P]>;
   public createJob(jobData?: object): P;
   public findJob(predicate: Object | PredicateFunction<P>, raw?: boolean): Promise<[P]>;
+  public getJob(job: string | P | [P]): Promise<[P]>;
 }
 
 declare namespace Queue {
@@ -53,6 +54,17 @@ declare namespace Queue {
     medium,
     high,
     highest,
+  }
+
+  interface JobOptions {
+    name?: string;
+    priority?: Priority;
+    timeout?: number;
+    retryDelay?: number;
+    retryMax?: number;
+    repeat?: boolean | number;
+    repeatDelay?: number;
+    dateEnable?: Date;
   }
 
   export interface Job {

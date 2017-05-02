@@ -6,5 +6,8 @@
   "author": "Talin <viridia@gmail.com>",
   "license": "UNLICENSED",
   "types": "./index.d.ts",
-  "typeScriptVersion": "2.0"
+  "typeScriptVersion": "2.0",
+  "devDependencies": {
+    "@types/node": "^7.0.15"
+  }
 }

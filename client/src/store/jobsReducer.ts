@@ -14,12 +14,13 @@ import {
   receiveJobsList,
   requestJobsList,
 } from './actions';
-import { JobList } from './types/JobList';
 import { JobQuery } from './types/JobQuery';
+import { JobQueryResult } from './types/JobQueryResult';
 
 /** The initial state of this reducer. */
-const initialState: JobList = {
+const initialState: JobQueryResult = {
   byId: Immutable.Map<number, Job>(),
+  byProject: Immutable.Map<number, Immutable.Map<number, Job>>(),
   error: null,
   list: Immutable.List<number>(),
   loading: false,
@@ -28,7 +29,7 @@ const initialState: JobList = {
 
 // Async action which retrieves the job list.
 export function fetchJobs(query: JobQuery = {}) {
-  return (dispatch: Dispatch<{}>, getState: () => JobList) => {
+  return (dispatch: Dispatch<{}>, getState: () => JobQueryResult) => {
     // See if the status is already loaded.
     // TODO: save the query params and only refetch if they changed.
     // const status = getState().backend.get(zone);
@@ -55,22 +56,24 @@ export function fetchJobs(query: JobQuery = {}) {
 }
 
 /** Action handlers. */
-const jobsReducer = handleActions<JobList>({
-  [REQUEST_JOBS_LIST]: (state: JobList) => ({ ...state, loading: true, error: null }),
-  [RECEIVE_JOBS_LIST]: (state: JobList, action: Action<[Job]>) => {
+const jobsReducer = handleActions<JobQueryResult>({
+  [REQUEST_JOBS_LIST]: (state: JobQueryResult) => ({ ...state, loading: true, error: null }),
+  [RECEIVE_JOBS_LIST]: (state: JobQueryResult, action: Action<[Job]>) => {
     const byId = Immutable.Map(action.payload.map(job => [job.id, job]));
+    const byProject = byId.groupBy((job: Job) => job.project);
     return {
       ...state,
-      byId: Immutable.Map(action.payload.map(job => [job.id, job])),
+      byId,
+      byProject,
       error: null,
       list: Immutable.List(action.payload.map(job => job.id)),
       loading: false,
     };
   },
-  [RECEIVE_JOBS_ERROR]: (state: JobList, action: Action<string>) => {
+  [RECEIVE_JOBS_ERROR]: (state: JobQueryResult, action: Action<string>) => {
     return { ...state, loading: false, error: action.payload };
   },
-  [SELECT_JOB]: (state: JobList, action: Action<number>) => {
+  [SELECT_JOB]: (state: JobQueryResult, action: Action<number>) => {
     return { ...state, selected: action.payload };
   },
 }, initialState);

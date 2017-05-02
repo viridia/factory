@@ -5,7 +5,11 @@
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/deepstream.io-client-ks/src"
+    ]
   },
   "include": [
     "src/**/*"
