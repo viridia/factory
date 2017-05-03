@@ -1,0 +1,1 @@
+export { JobRecord } from './JobRecord';

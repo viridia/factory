@@ -1,0 +1,46 @@
+{
+  "type": "Job",
+  "name": "Mandlebrot",
+  "params": [
+    {
+      "id": "frames",
+      "caption": "Frames",
+      "type": "range",
+      "default": [1, 1]
+    }
+  ],
+  "steps": [
+    {
+      "id": "render.{i}",
+      "title": "render",
+      "image": "",
+      "args": [
+      ],
+      "count": "{frames.length}",
+      "start": "{frames.start}",
+      "outputs": [
+        "/images/image.{i}.jpg",
+      ]
+    },
+    {
+      "id": "shoot",
+      "title": "shoot movie",
+      "image": "",
+      "depends": [
+        {
+          "$foreach": ["n", "{frames}", "render.{n}"]
+        }
+      ],
+      "args": [
+      ],
+      "inputs": [
+        {
+          "$foreach": ["n", "{frames}", "/images/image.{n}.jpg"]
+        }
+      ],
+      "outputs": [
+        "/movies/movie.mp4",
+      ],
+    }
+  ]
+}

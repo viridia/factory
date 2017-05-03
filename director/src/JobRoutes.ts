@@ -1,9 +1,9 @@
 // import { Job as ApiJob } from 'common/types/Job';
-import { Job, JobRequest, JobState } from 'common/types';
+import { Job, JobChangeRequest, JobRequest, JobState } from 'common/types/api';
+import { JobRecord } from 'common/types/queue';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as Queue from 'rethinkdb-job-queue';
-import { JobRecord } from './JobRecord';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
 export default class JobRoutes {
@@ -22,6 +22,8 @@ export default class JobRoutes {
       name: 'JobQueue',
     });
     this.jobQueue.on('added', this.handleJobAdded.bind(this));
+    this.jobQueue.on('removed', this.handleJobRemoved.bind(this));
+    this.jobQueue.on('updated', this.handleJobUpdated.bind(this));
     this.routes();
   }
 
@@ -33,6 +35,8 @@ export default class JobRoutes {
   private routes(): void {
     this.router.get('/config', this.getConfig.bind(this));
     this.router.get('/jobs/:id', this.getJob.bind(this));
+    this.router.patch('/jobs/:id', this.patchJob.bind(this));
+    this.router.delete('/jobs/:id', this.deleteJob.bind(this));
     this.router.get('/jobs', this.queryJobs.bind(this));
     this.router.post('/jobs', this.createJob.bind(this));
     this.router.get('/tasks/:id', this.getTask.bind(this));
@@ -45,6 +49,28 @@ export default class JobRoutes {
 
   private getJob(req: Request, res: Response, next: NextFunction): void {
     res.json({ message: `requesting job ${req.params.id}.` });
+  }
+
+  private patchJob(req: Request, res: Response, next: NextFunction): void {
+    const jcr = req.body as JobChangeRequest;
+    this.jobQueue.getJob(req.params.id).then(jobs => {
+      console.debug(jobs);
+    });
+    // res.json({ message: `requesting job ${req.params.id}.` });
+  }
+
+  private deleteJob(req: Request, res: Response, next: NextFunction): void {
+    console.info('Attempting to delete job:', req.params.id);
+    this.jobQueue.cancelJob(req.params.id).then(jobs => {
+      // const job = jobs[0];
+      // console.info('Cancellation successful:', job);
+      // this.deepstream.event.emit(`jobs.project.${job.project}`,
+      //   { jobsUpdated: [this.serializeJob(job)] });
+      res.end();
+    }, (error: any) => {
+      console.error(error);
+      res.status(500).json({ message: error.message });
+    });
   }
 
   private queryJobs(req: Request, res: Response, next: NextFunction): void {
@@ -93,11 +119,35 @@ export default class JobRoutes {
       const job = jobs[0];
       this.deepstream.event.emit(`jobs.project.${job.project}`,
         { jobsAdded: [this.serializeJob(job)] });
-      console.info('Notification sent');
+    });
+  }
+
+  private handleJobRemoved(jobId: string) {
+    this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
+      const job = jobs[0];
+      this.deepstream.event.emit(`jobs.project.${job.project}`, { jobsDeleted: [jobId] });
+    });
+  }
+
+  private handleJobUpdated(queueId: string, jobId: string) {
+    this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
+      const job = jobs[0];
+      this.deepstream.event.emit(`jobs.project.${job.project}`,
+        { jobsUpdated: [this.serializeJob(job)] });
     });
   }
 
   private serializeJob(record: JobRecord): Job {
+    let state = JobState.WAITING;
+    if (record.status === 'active') {
+      state = JobState.RUNNING;
+    } else if (record.status === 'canceled') {
+      state = JobState.CANCELED;
+    } else if (record.status === 'completed') {
+      state = JobState.COMPLETED;
+    } else if (record.status === 'failed' || record.status === 'terminated') {
+      state = JobState.FAILED;
+    }
     return {
       id: record.id,
       user: record.user,
@@ -107,7 +157,7 @@ export default class JobRoutes {
       mainFileName: record.mainFileName,
       recipe: record.recipe,
       description: record.description,
-      state: JobState.WAITING,
+      state,
       createdAt: record.dateCreated,
       startedAt: record.dateStarted,
       endedAt: record.dateFinished,

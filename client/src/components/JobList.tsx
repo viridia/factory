@@ -1,37 +1,43 @@
-import { Job } from 'common/types';
+import { Job } from 'common/types/api';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
+import { selectJob } from '../store/actions';
 import { fetchJobs } from '../store/jobsReducer';
 import { updateProjectSubscriptions } from '../store/subscriptionsReducer';
 import { JobQueryResult } from '../store/types/JobQueryResult';
 import './JobList.scss';
 import JobListItem from './JobListItem';
 
-interface JobsListProps {
+interface MappedProps {
   jobs: JobQueryResult;
   dispatch: Dispatch<{}>;
+  selectJob: (jobId: string) => void;
 }
 
 /** Displays the current list of jobs. */
-class JobList extends React.Component<JobsListProps, undefined> {
+class JobList extends React.Component<MappedProps, undefined> {
+  constructor() {
+    super();
+    this.onClick = this.onClick.bind(this);
+  }
+
   public componentWillMount() {
     const { jobs, dispatch } = this.props;
     dispatch(fetchJobs());
   }
 
-  public componentWillReceiveProps(nextProps: JobsListProps) {
-    console.debug('JobListProps: ', nextProps.jobs.byProject.toJS());
-    const { jobs, dispatch } = nextProps;
-    dispatch(updateProjectSubscriptions(Immutable.Set<number>(jobs.byProject.keySeq())));
+  public componentWillReceiveProps(nextProps: MappedProps) {
+    const { jobs } = nextProps;
+    this.props.dispatch(updateProjectSubscriptions(Immutable.Set<number>(jobs.byProject.keySeq())));
   }
 
   public renderListContent() {
     const { list, byId, error, loading, selected } = this.props.jobs;
     if (error) {
       return <div className="error">{error}</div>;
-    } else if (list.size > 0) {
+    } else if (list.length > 0) {
       return (
         <table className="job-list-table">
           <thead>
@@ -55,11 +61,15 @@ class JobList extends React.Component<JobsListProps, undefined> {
   public render() {
     const { jobs } = this.props;
     return (
-      <section className="items">{this.renderListContent()}</section>
+      <section className="items" onClick={this.onClick}>{this.renderListContent()}</section>
     );
+  }
+
+  private onClick() {
+    this.props.dispatch(selectJob(null));
   }
 }
 
-export default connect(
-  state => ({ jobs: state.jobs }),
+export default connect<{}, MappedProps, any>(
+  (state, ownProps) => ({ ...ownProps, jobs: state.jobs }),
 )(JobList);

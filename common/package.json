@@ -4,5 +4,11 @@
   "description": "Common type definitions shared between projects",
   "main": "index.js",
   "author": "Talin <viridia@gmail.com>",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/rethinkdb-job-queue": "file:../typings/rethinkdb-job-queue/"
+  },
+  "dependencies": {
+    "rethinkdb-job-queue": "^3.1.0"
+  }
 }

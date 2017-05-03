@@ -4,6 +4,7 @@ import { Action, handleAction, handleActions } from 'redux-actions';
 import globals from '../globals';
 import { SET_ACTIVE_SUBSCRIPTIONS } from './actionIds';
 import { setActiveSubscriptions } from './actions';
+import { jobsAdded, jobsDeleted, jobsUpdated } from './actions';
 import {
   ActiveSubscriptions,
   SubscriptionCallback,
@@ -23,7 +24,7 @@ export function updateProjectSubscriptions(projectIds: Immutable.Set<number>) {
       // Remove any subscriptions that are not present in the list of projectIds.
       activeSubscriptions.forEach((callback, projectId) => {
         if (!projectIds.has(projectId)) {
-          globals.deepstream.event.unsubscribe(`jobs.projects.${projectId}`, callback);
+          globals.deepstream.event.unsubscribe(`jobs.project.${projectId}`, callback);
           mutable.delete(projectId);
           console.info('removing subscription:', projectId);
         }
@@ -32,11 +33,18 @@ export function updateProjectSubscriptions(projectIds: Immutable.Set<number>) {
       projectIds.forEach(projectId => {
         if (projectId !== undefined && !mutable.has(projectId)) {
           const callback = (resp: any) => {
-            console.info('subscription response:', resp);
+            if (resp.jobsAdded) {
+              dispatch(jobsAdded(resp.jobsAdded));
+            }
+            if (resp.jobsUpdated) {
+              dispatch(jobsUpdated(resp.jobsUpdated));
+            }
+            if (resp.jobsDeleted) {
+              dispatch(jobsDeleted(resp.jobsDeleted));
+            }
           };
-          globals.deepstream.event.subscribe(`jobs.projects.${projectId}`, callback);
+          globals.deepstream.event.subscribe(`jobs.project.${projectId}`, callback);
           mutable.set(projectId, callback);
-          console.info('adding subscription:', projectId);
         }
       });
     });

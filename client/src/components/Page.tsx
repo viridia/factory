@@ -1,6 +1,8 @@
-import { Task } from 'common/types';
+import { Task } from 'common/types/api';
 import * as Immutable from 'immutable';
 import * as React from 'react';
+import JobControlForm from './JobControlForm';
+import JobDetails from './JobDetails';
 import JobEntryForm from './JobEntryForm';
 import JobList from './JobList';
 import './Page.scss';
@@ -24,6 +26,8 @@ export default class Page extends React.Component<undefined, undefined> {
           <section className="task-panel">
             <section className="job-details border-panel">
               <header>Job Details</header>
+              <JobDetails />
+              <JobControlForm />
             </section>
             <section className="task-list border-panel">
               <header>Tasks</header>

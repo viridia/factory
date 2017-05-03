@@ -1,8 +1,5 @@
-// import * as Queue from 'rethinkdb-job-queue';
-export * from 'rethinkdb-job-queue';
+import * as Queue from 'rethinkdb-job-queue';
+import Scheduler from './Scheduler';
 
-// function greeter(person: string) {
-//   console.log(`Hello, ${person}!`);
-// }
-//
-// greeter('world');
+const scheduler = new Scheduler();
+scheduler.run();

@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { JobRequest } from 'common/types';
+import { JobRequest } from 'common/types/api';
 import { Dispatch } from 'redux';
 import { Action, handleAction, handleActions } from 'redux-actions';
 import {
@@ -27,7 +27,6 @@ export function createJob(request: JobRequest) {
     return axios.post('/api/v1/jobs', request)
     .then((resp: AxiosResponse) => {
       // Update the store.
-      console.debug(resp.data);
       dispatch(createJobOK(resp.data));
     }, (error: AxiosError) => {
       // Signal an error.

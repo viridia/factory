@@ -6,6 +6,12 @@ interface PredicateFunction<P> {
   (job: P): boolean;
 }
 
+interface ProcessCallback<P> {
+  (job: P,
+   next: (error?: Error, jobResult?: P | string) => void,
+   onCancel: (job: P, cancellationCallback?: () => void) => void): void;
+}
+
 declare class Queue<P extends Queue.Job> extends EventEmitter {
   public readonly name: string;
   public readonly id: string;
@@ -23,10 +29,13 @@ declare class Queue<P extends Queue.Job> extends EventEmitter {
   public readonly paused: boolean;
   public readonly idle: boolean;
   constructor(cxOptions?: Queue.ConnectionOptions, qOptions?: Queue.QueueOptions);
-  public addJob(job: P | [P]): Promise<[P]>;
+  public addJob(job: P | P[]): Promise<P[]>;
   public createJob(jobData?: object): P;
-  public findJob(predicate: Object | PredicateFunction<P>, raw?: boolean): Promise<[P]>;
-  public getJob(job: string | P | [P]): Promise<[P]>;
+  public cancelJob(job: string | P | P[]): Promise<P[]>;
+  public findJob(predicate: Object | PredicateFunction<P>, raw?: boolean): Promise<P[]>;
+  public getJob(job: string | P | P[]): Promise<P[]>;
+  public process(handler: ProcessCallback<P>): Promise<boolean>;
+  public removeJob(job: string | P | P[]): Promise<P[]>;
 }
 
 declare namespace Queue {
@@ -80,7 +89,7 @@ declare namespace Queue {
     processCount?: number;
     progress?: number;
     status?: string;
-    log?: [LogEntry];
+    log?: LogEntry[];
     dateCreated?: Date;
     dateStarted?: Date;
     dateFinished?: Date;
@@ -101,7 +110,7 @@ declare namespace Queue {
     public processCount?: number;
     public progress?: number;
     public status?: string;
-    public log?: [Queue.LogEntry];
+    public log?: Queue.LogEntry[];
     public dateCreated?: Date;
     public dateStarted?: Date;
     public dateFinished?: Date;
