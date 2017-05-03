@@ -13,7 +13,6 @@
     "typescript": "^2.3.2"
   },
   "dependencies": {
-    "@types/rethinkdb-job-queue": "file:typings/rethinkdb-job-queue",
     "common": "file:common",
     "immutable": "^3.8.1",
     "typescript": "^2.3.2"
