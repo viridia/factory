@@ -16,7 +16,7 @@ export default class JobRoutes {
     this.deepstream = deepstream;
     this.jobQueue = new Queue<JobRecord>({
       host: 'localhost',
-      port: 8092,
+      port: 31000,
       db: 'Factory',
     }, {
       name: 'JobQueue',

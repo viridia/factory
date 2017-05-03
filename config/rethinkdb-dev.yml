@@ -5,10 +5,11 @@ metadata:
     db: rethinkdb
   name: rethinkdb-admin
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
    - port: 8080
      targetPort: admin
+     nodePort: 31001
   selector:
     db: rethinkdb
     role: admin
@@ -34,10 +35,11 @@ metadata:
     db: rethinkdb
   name: rethinkdb-proxy
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
     - port: 28015
       targetPort: driver
+      nodePort: 31000
   selector:
     db: rethinkdb
     role: proxy

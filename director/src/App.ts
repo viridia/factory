@@ -13,7 +13,7 @@ export default class App {
 
   constructor() {
     this.express = express();
-    this.deepstream = deepstream('192.168.99.100:32271').login();
+    this.deepstream = deepstream('192.168.99.100:31002').login();
     this.middleware();
     this.routes();
   }

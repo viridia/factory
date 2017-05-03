@@ -9,6 +9,7 @@ spec:
   ports:
    - port: 8080
      targetPort: websocket
+     nodePort: 31002
   selector:
     server: deepstream
     role: replica
