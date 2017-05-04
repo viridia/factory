@@ -27,9 +27,6 @@
 * Client
   * Status page
   * React / Webpack
-* Pub / Sub
-  * deepstream
-  * faye
 
 * Schema:
   * Recipe

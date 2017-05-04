@@ -12,13 +12,10 @@ export default class JobRoutes {
   private deepstream: deepstreamIO.Client;
 
   constructor(deepstream: deepstreamIO.Client) {
+    const [host, port] = process.env.RETHINKDB_HOST.split(':');
     this.router = Router();
     this.deepstream = deepstream;
-    this.jobQueue = new Queue<JobRecord>({
-      host: 'localhost',
-      port: 31000,
-      db: 'Factory',
-    }, {
+    this.jobQueue = new Queue<JobRecord>({ host, port, db: process.env.RETHINKDB_DB }, {
       name: 'JobQueue',
     });
     this.jobQueue.on('added', this.handleJobAdded.bind(this));
@@ -44,7 +41,7 @@ export default class JobRoutes {
   }
 
   private getConfig(req: Request, res: Response, next: NextFunction): void {
-    res.json({ deepstreamHost: '192.168.99.100:32271' });
+    res.json({ hosts: { deepstream: process.env.DEEPSTREAM_HOST } });
   }
 
   private getJob(req: Request, res: Response, next: NextFunction): void {

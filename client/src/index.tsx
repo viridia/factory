@@ -1,3 +1,4 @@
+import axios from 'axios';
 import * as dateformat from 'dateformat';
 import * as deepstream from 'deepstream.io-client-js';
 import * as React from 'react';
@@ -11,8 +12,11 @@ import store from './store';
 document.addEventListener('DOMContentLoaded', () => {
   dateformat.masks.brief = 'm/d/yy h:MM TT';
   // TODO(talin) - get this URL from the backend.
-  globals.deepstream = deepstream('192.168.99.100:32271').login();
-  ReactDOM.render(
-    <Provider store={store}><Page /></Provider>,
-    document.getElementById('react-root'));
+  axios.get('/api/v1/config').then(resp => {
+    globals.hosts = resp.data.hosts;
+    globals.deepstream = deepstream(globals.hosts.deepstream).login();
+    ReactDOM.render(
+      <Provider store={store}><Page /></Provider>,
+      document.getElementById('react-root'));
+  });
 });

@@ -1,7 +1,7 @@
 import * as Queue from 'rethinkdb-job-queue';
 
 /** Data structure of a Job as it is stored in the database. */
-export class JobRecord extends Queue.AbstractJob {
+export class JobRecord extends Queue.Job {
   public user: number;
   public username: string;
   public project: number;

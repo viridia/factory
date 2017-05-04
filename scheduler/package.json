@@ -10,6 +10,7 @@
     "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
   },
   "dependencies": {
+    "dotenv": "^4.0.0",
     "rethinkdb-job-queue": "^3.1.0",
     "typescript": "^2.3.2"
   },
