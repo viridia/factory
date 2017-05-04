@@ -75,8 +75,8 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
         return <div className="running">RUNNING</div>;
       case JobState.COMPLETED:
         return <div className="completed">COMPLETED</div>;
-      case JobState.CANCELED:
-        return <div className="canceled">CANCELED</div>;
+      case JobState.CANCELLED:
+        return <div className="canceled">CANCELLED</div>;
       case JobState.FAILED:
         return <div className="failed">FAILED</div>;
     }

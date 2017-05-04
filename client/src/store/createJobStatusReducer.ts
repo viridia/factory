@@ -30,10 +30,11 @@ export function createJob(request: JobRequest) {
       dispatch(createJobOK(resp.data));
     }, (error: AxiosError) => {
       // Signal an error.
-      console.error('create job failed:', error);
       if (error.response) {
+        console.error('create job failed:', error.response.data);
         dispatch(createJobFailed(error.response.statusText));
       } else {
+        console.error('create job failed:', error);
         dispatch(createJobFailed(error.message));
       }
     });

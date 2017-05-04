@@ -44,6 +44,7 @@
 
 * Next steps:
   * pub/sub job creation
+    * We need to subscribe based on current query as well as current jobs.
   * job cancellation
   * create a container for the hello app.
   * TypeScript type definitions for certainty

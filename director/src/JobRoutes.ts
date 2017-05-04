@@ -1,19 +1,24 @@
-// import { Job as ApiJob } from 'common/types/Job';
+import * as Ajv from 'ajv';
 import { Job, JobChangeRequest, JobRequest, JobState } from 'common/types/api';
 import { JobRecord } from 'common/types/queue';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
+import * as fs from 'fs';
 import * as Queue from 'rethinkdb-job-queue';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
 export default class JobRoutes {
   private router: Router;
+  private ajv: Ajv.Ajv;
+  private validateJobRequest: Ajv.ValidateFunction;
   private jobQueue: Queue<JobRecord>;
   private deepstream: deepstreamIO.Client;
 
   constructor(deepstream: deepstreamIO.Client) {
     const [host, port] = process.env.RETHINKDB_HOST.split(':');
     this.router = Router();
+    this.ajv = Ajv();
+    this.validateJobRequest = this.loadValidator('./schemas/JobRequest.schema.json');
     this.deepstream = deepstream;
     this.jobQueue = new Queue<JobRecord>({ host, port, db: process.env.RETHINKDB_DB }, {
       name: 'JobQueue',
@@ -83,6 +88,11 @@ export default class JobRoutes {
 
   private createJob(req: Request, res: Response, next: NextFunction): void {
     const jr = req.body as JobRequest;
+    if (!this.validateJobRequest(jr)) {
+      // console.error(this.validateJobRequest.errors);
+      res.status(400).json({ error: 'validation', errorList: this.validateJobRequest.errors });
+      return;
+    }
     const jobData = this.jobQueue.createJob({
       user: jr.user,
       username: jr.username,
@@ -94,6 +104,11 @@ export default class JobRoutes {
       tasksTotal: 0,
       tasksFinished: 0,
       tasksFailed: 0,
+      waitingTasks: [],
+      runningTasks: [],
+      finishedTasks: [],
+      canceledTasks: [],
+      failedTasks: [],
     });
     this.jobQueue.addJob(jobData).then(jobRecords => {
       res.json({ message: 'posting a new job.', job: jobRecords[0].id });
@@ -138,8 +153,8 @@ export default class JobRoutes {
     let state = JobState.WAITING;
     if (record.status === 'active') {
       state = JobState.RUNNING;
-    } else if (record.status === 'canceled') {
-      state = JobState.CANCELED;
+    } else if (record.status === 'cancelled') {
+      state = JobState.CANCELLED;
     } else if (record.status === 'completed') {
       state = JobState.COMPLETED;
     } else if (record.status === 'failed' || record.status === 'terminated') {
@@ -162,5 +177,10 @@ export default class JobRoutes {
       tasksFinished: record.progress,
       tasksFailed: 0,
     };
+  }
+
+  private loadValidator(path: string) {
+    const json = JSON.parse(fs.readFileSync(path).toString());
+    return this.ajv.compile(json);
   }
 }

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "id": "http://nimblecollective.com/schemas/JobRequest.schema.json",
+  "type": "object",
+  "title": "JobRequest",
+  "description": "Object type used to request creation of a new render factory job.",
+  "properties": {
+    "user": {
+      "description": "User ID of the user submitting the job.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "username": {
+      "description": "Username of the user submitting the job.",
+      "type": "string"
+    },
+    "project": {
+      "description": "ID of the project containing the file that is being rendered.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "asset": {
+      "description": "ID of the asset containing the file that is being rendered.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "mainFileName": {
+      "description": "The main input file being rendered.",
+      "type": "string"
+    },
+    "recipe": {
+      "description": "Recipe to use rendering this file.",
+      "type": "string"
+    },
+    "description": {
+      "description": "Textual description of this job.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user",
+    "username",
+    "project",
+    "asset",
+    "mainFileName",
+    "recipe",
+    "description"
+  ]
+}

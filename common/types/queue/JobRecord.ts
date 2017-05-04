@@ -12,4 +12,9 @@ export class JobRecord extends Queue.Job {
   public tasksTotal: number;
   public tasksFinished: number;
   public tasksFailed: number;
+  public waitingTasks: string[];  // Task ids whose dependencies haven't been met.
+  public runningTasks: string[];  // Task ids that are running
+  public finishedTasks: string[]; // Task ids that are finished successfully
+  public canceledTasks: string[]; // Task ids that have been canceled
+  public failedTasks: string[];   // Task ids that have failed
 }

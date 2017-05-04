@@ -3,7 +3,8 @@ export enum JobState {
   WAITING,
   RUNNING,
   COMPLETED,
-  CANCELED,
+  CANCELING,
+  CANCELLED,
   FAILED,
 }
 

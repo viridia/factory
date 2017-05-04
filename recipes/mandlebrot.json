@@ -16,6 +16,9 @@
       "image": "",
       "args": [
       ],
+      "expand": {
+        "i": "{frames}",
+      },
       "count": "{frames.length}",
       "start": "{frames.start}",
       "outputs": [

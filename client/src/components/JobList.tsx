@@ -30,7 +30,10 @@ class JobList extends React.Component<MappedProps, undefined> {
 
   public componentWillReceiveProps(nextProps: MappedProps) {
     const { jobs } = nextProps;
-    this.props.dispatch(updateProjectSubscriptions(Immutable.Set<number>(jobs.byProject.keySeq())));
+    const projectIds = Immutable.Set<number>(jobs.byProject.keySeq());
+    const currentProject = 10; // Also watch for new jobs in current project.
+    // We probably also need a per-user channel.
+    this.props.dispatch(updateProjectSubscriptions(projectIds.add(currentProject)));
   }
 
   public renderListContent() {

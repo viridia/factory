@@ -10,6 +10,7 @@
     "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
   },
   "dependencies": {
+    "ajv": "^5.0.1",
     "body-parser": "^1.17.1",
     "deepstream.io-client-js": "^2.1.4",
     "dotenv": "^4.0.0",

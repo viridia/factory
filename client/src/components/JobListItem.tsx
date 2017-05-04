@@ -38,7 +38,7 @@ class JobListItem extends React.Component<MappedProps, undefined> {
             running: job.state === JobState.RUNNING,
             waiting: job.state === JobState.WAITING,
             finished: job.state === JobState.COMPLETED,
-            canceled: job.state === JobState.CANCELED,
+            canceled: job.state === JobState.CANCELLED,
             failed: job.state === JobState.FAILED,
             selected,
           })}
