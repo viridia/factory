@@ -17,6 +17,7 @@
     "css-loader": "^0.28.0",
     "dateformat": "^2.0.0",
     "deepstream.io-client-js": "^2.1.4",
+    "factory-common": "file:../common",
     "node-sass": "^4.5.2",
     "prop-types": "^15.5.8",
     "react": "^15.5.4",

@@ -48,3 +48,7 @@
   * job cancellation
   * create a container for the hello app.
   * TypeScript type definitions for certainty
+
+Future:
+* Improve JSON schema error messages.
+* Bunyan logging

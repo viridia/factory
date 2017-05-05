@@ -1,6 +1,6 @@
 {
-  "name": "common",
-  "version": "0.0.4",
+  "name": "factory-common",
+  "version": "0.0.5",
   "description": "Common type definitions shared between projects",
   "main": "index.js",
   "author": "Talin <viridia@gmail.com>",

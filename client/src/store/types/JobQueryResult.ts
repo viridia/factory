@@ -1,4 +1,4 @@
-import { Job } from 'common/types/api';
+import { Job } from 'factory-common/types/api';
 import * as Immutable from 'immutable';
 
 /** Data structure representing the list of jobs queried from the director server. */

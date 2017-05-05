@@ -1,5 +1,5 @@
 import * as classnames from 'classnames';
-import { Job, JobState } from 'common/types/api';
+import { Job, JobState } from 'factory-common/types/api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { ProgressBar } from 'react-bootstrap';

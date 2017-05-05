@@ -1,4 +1,4 @@
-import { Task } from 'common/types/api';
+import { Task } from 'factory-common/types/api';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import JobControlForm from './JobControlForm';

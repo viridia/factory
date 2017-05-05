@@ -18,7 +18,7 @@ declare class Queue<P extends Queue.Job> extends EventEmitter {
   public readonly host: string;
   public readonly port: number;
   public readonly db: string;
-  public readonly r: object; // Actually RethinkDbDash handle
+  public readonly r: any; // Actually RethinkDbDash handle
   public readonly changeFeed: boolean;
   public readonly master: boolean;
   public readonly masterInterval: boolean | number;

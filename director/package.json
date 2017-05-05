@@ -10,12 +10,14 @@
     "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
   },
   "dependencies": {
+    "@types/rethinkdb-job-queue": "file:../typings/rethinkdb-job-queue/",
     "ajv": "^5.0.1",
     "body-parser": "^1.17.1",
     "deepstream.io-client-js": "^2.1.4",
     "dotenv": "^4.0.0",
     "express": "^4.15.2",
     "express-http-proxy": "^1.0.1",
+    "factory-common": "file:../common",
     "rethinkdb-job-queue": "^3.1.0"
   },
   "devDependencies": {

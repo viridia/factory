@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { JobRequest } from 'common/types/api';
+import { JobRequest } from 'factory-common/types/api';
 import { Dispatch } from 'redux';
 import { Action, handleAction, handleActions } from 'redux-actions';
 import {

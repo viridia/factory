@@ -39,6 +39,7 @@ export interface Step {
 }
 
 export interface Recipe {
+  id: string;
   type?: string;
   name: string;
   params?: Param[];

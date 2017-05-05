@@ -1,52 +1,46 @@
 import * as Ajv from 'ajv';
-import { Job, JobChangeRequest, JobRequest, JobState } from 'common/types/api';
-import { JobRecord } from 'common/types/queue';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
+import { Job, JobChangeRequest, JobRequest, JobState } from 'factory-common/types/api';
+import { JobRecord } from 'factory-common/types/queue';
 import * as fs from 'fs';
 import * as Queue from 'rethinkdb-job-queue';
+import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
 export default class JobRoutes {
   private router: Router;
-  private ajv: Ajv.Ajv;
-  private validateJobRequest: Ajv.ValidateFunction;
+  private jobRequestSchema: Ajv.ValidateFunction;
   private jobQueue: Queue<JobRecord>;
   private deepstream: deepstreamIO.Client;
 
-  constructor(deepstream: deepstreamIO.Client) {
+  constructor(jobQueue: Queue<JobRecord>, deepstream: deepstreamIO.Client) {
     const [host, port] = process.env.RETHINKDB_HOST.split(':');
     this.router = Router();
-    this.ajv = Ajv();
-    this.validateJobRequest = this.loadValidator('./schemas/JobRequest.schema.json');
+    this.jobRequestSchema = loadSchema('./schemas/JobRequest.schema.json');
     this.deepstream = deepstream;
-    this.jobQueue = new Queue<JobRecord>({ host, port, db: process.env.RETHINKDB_DB }, {
-      name: 'JobQueue',
-    });
+    this.jobQueue = jobQueue;
     this.jobQueue.on('added', this.handleJobAdded.bind(this));
-    this.jobQueue.on('removed', this.handleJobRemoved.bind(this));
     this.jobQueue.on('updated', this.handleJobUpdated.bind(this));
+    this.jobQueue.on('cancelled', this.handleJobUpdated.bind(this));
     this.routes();
   }
 
   /** Add this router to the parent router. */
   public apply(parent: Router): void {
-    parent.use('/api/v1', this.router);
+    parent.use('/jobs', this.router);
   }
 
   private routes(): void {
-    this.router.get('/config', this.getConfig.bind(this));
-    this.router.get('/jobs/:id', this.getJob.bind(this));
-    this.router.patch('/jobs/:id', this.patchJob.bind(this));
-    this.router.delete('/jobs/:id', this.deleteJob.bind(this));
-    this.router.get('/jobs', this.queryJobs.bind(this));
-    this.router.post('/jobs', this.createJob.bind(this));
-    this.router.get('/tasks/:id', this.getTask.bind(this));
-    this.router.get('/tasks', this.queryTasks.bind(this));
-  }
-
-  private getConfig(req: Request, res: Response, next: NextFunction): void {
-    res.json({ hosts: { deepstream: process.env.DEEPSTREAM_HOST } });
+    this.router.get('/:id', this.getJob.bind(this));
+    this.router.patch('/:id', this.patchJob.bind(this));
+    this.router.delete('/:id', this.deleteJob.bind(this));
+    this.router.get('/', this.queryJobs.bind(this));
+    this.router.post('/', this.createJob.bind(this));
+    // this.router.get('/:id/logs', this.getJobLogs.bind(this));
+    // this.router.get('/tasks/:id', this.getTask.bind(this));
+    // this.router.get('/tasks/:id/logs', this.getTask.bind(this));
+    // this.router.get('/tasks', this.queryTasks.bind(this));
   }
 
   private getJob(req: Request, res: Response, next: NextFunction): void {
@@ -55,23 +49,61 @@ export default class JobRoutes {
 
   private patchJob(req: Request, res: Response, next: NextFunction): void {
     const jcr = req.body as JobChangeRequest;
+    console.info('patchJob:', req.params.id, jcr);
     this.jobQueue.getJob(req.params.id).then(jobs => {
-      console.debug(jobs);
+      if (jobs.length === 0) {
+        res.status(404).json({ error: 'not-found' });
+        return;
+      }
+      const job = jobs[0];
+      if (jcr.canceled) {
+        if (job.status === 'created') {
+          // Job was never put in the queue
+          this.jobQueue.removeJob(req.params.id).then(canceledJobs => {
+            console.info(`Job ${job.id} removed.`);
+            res.end();
+          }, (error: any) => {
+            console.error(error);
+            res.status(500).json({ error: 'internal', message: error.message });
+          });
+        } else if (job.status === 'active' || job.status === 'waiting') {
+          this.jobQueue.cancelJob(req.params.id).then(canceledJobs => {
+            console.info(`Job ${job.id} canceled.`);
+            res.end();
+          }, (error: any) => {
+            console.error(error);
+            res.status(500).json({ error: 'internal', message: error.message });
+          });
+        } else {
+          console.error(`Attempted to cancel job ${job.id} that was not running`);
+          res.status(400).json({ error: 'not-running' });
+        }
+      }
+      res.end();
     });
-    // res.json({ message: `requesting job ${req.params.id}.` });
   }
 
   private deleteJob(req: Request, res: Response, next: NextFunction): void {
-    console.info('Attempting to delete job:', req.params.id);
-    this.jobQueue.cancelJob(req.params.id).then(jobs => {
-      // const job = jobs[0];
-      // console.info('Cancellation successful:', job);
-      // this.deepstream.event.emit(`jobs.project.${job.project}`,
-      //   { jobsUpdated: [this.serializeJob(job)] });
-      res.end();
-    }, (error: any) => {
-      console.error(error);
-      res.status(500).json({ message: error.message });
+    // console.info('Attempting to delete job:', req.params.id);
+    this.jobQueue.getJob(req.params.id).then(jobs => {
+      if (jobs.length === 0) {
+        res.status(404).json({ error: 'not-found' });
+        return;
+      }
+      const job = jobs[0];
+      if (job.status !== 'active') {
+        this.jobQueue.removeJob(req.params.id).then(canceledJobs => {
+          console.info(`Job ${job.id} removed.`);
+          this.deepstream.event.emit(`jobs.project.${job.project}`, { jobsDeleted: [job.id] });
+          res.end();
+        }, (error: any) => {
+          console.error(error);
+          res.status(500).json({ error: 'internal', message: error.message });
+        });
+      } else {
+        console.error(`Attempted to remove job ${job.id} that was running`);
+        res.status(400).json({ error: 'not-stopped' });
+      }
     });
   }
 
@@ -88,9 +120,10 @@ export default class JobRoutes {
 
   private createJob(req: Request, res: Response, next: NextFunction): void {
     const jr = req.body as JobRequest;
-    if (!this.validateJobRequest(jr)) {
-      // console.error(this.validateJobRequest.errors);
-      res.status(400).json({ error: 'validation', errorList: this.validateJobRequest.errors });
+    if (!this.jobRequestSchema(jr)) {
+      const errors = ajv.errorsText(this.jobRequestSchema.errors, { dataVar: 'JobRequest' });
+      console.error(errors);
+      res.status(400).json({ error: 'validation', message: errors });
       return;
     }
     const jobData = this.jobQueue.createJob({
@@ -129,19 +162,14 @@ export default class JobRoutes {
   private handleJobAdded(queueId: string, jobId: string) {
     this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
       const job = jobs[0];
+      // TODO: Also post to user's channel?
       this.deepstream.event.emit(`jobs.project.${job.project}`,
         { jobsAdded: [this.serializeJob(job)] });
     });
   }
 
-  private handleJobRemoved(jobId: string) {
-    this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
-      const job = jobs[0];
-      this.deepstream.event.emit(`jobs.project.${job.project}`, { jobsDeleted: [jobId] });
-    });
-  }
-
   private handleJobUpdated(queueId: string, jobId: string) {
+    console.info('job updated:', jobId);
     this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
       const job = jobs[0];
       this.deepstream.event.emit(`jobs.project.${job.project}`,
@@ -177,10 +205,5 @@ export default class JobRoutes {
       tasksFinished: record.progress,
       tasksFailed: 0,
     };
-  }
-
-  private loadValidator(path: string) {
-    const json = JSON.parse(fs.readFileSync(path).toString());
-    return this.ajv.compile(json);
   }
 }

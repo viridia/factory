@@ -10,11 +10,14 @@
     "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
   },
   "dependencies": {
+    "@types/rethinkdb-job-queue": "file:../typings/rethinkdb-job-queue",
     "dotenv": "^4.0.0",
+    "factory-common": "file:../common",
     "rethinkdb-job-queue": "^3.1.0",
     "typescript": "^2.3.2"
   },
   "devDependencies": {
+    "@types/dotenv": "^4.0.0",
     "@types/node": "^7.0.14",
     "@types/rethinkdb-job-queue": "file:../typings/rethinkdb-job-queue/",
     "nodemon": "^1.11.0",

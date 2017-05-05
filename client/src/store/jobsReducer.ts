@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { Job, JobRequest } from 'common/types/api';
+import { Job, JobRequest, JobState } from 'factory-common/types/api';
 import * as Immutable from 'immutable';
 import { Dispatch } from 'redux';
 import { Action, handleAction, handleActions } from 'redux-actions';
@@ -61,6 +61,24 @@ export function fetchJobs(query: JobQuery = {}) {
 // Async action which cancels a job.
 export function cancelJob(jobId: string) {
   return (dispatch: Dispatch<{}>, getState: () => JobQueryResult) => {
+    return axios.patch(`/api/v1/jobs/${jobId}`, {
+      canceled: true,
+    }).catch((error: AxiosError) => {
+      console.error(error);
+      // TODO: Display error toast.
+      // // Signal an error.
+      // if (error.response) {
+      //   dispatch(receiveJobsError(error.response.statusText));
+      // } else {
+      //   dispatch(receiveJobsError(error.message));
+      // }
+    });
+  };
+}
+
+// Async action which cancels a job.
+export function deleteJob(jobId: string) {
+  return (dispatch: Dispatch<{}>, getState: () => JobQueryResult) => {
     return axios.delete(`/api/v1/jobs/${jobId}`).catch((error: AxiosError) => {
       console.error(error);
       // TODO: Display error toast.
@@ -104,20 +122,23 @@ const jobsReducer = handleActions<JobQueryResult>({
     return { ...state, byId, list };
   },
   [JOBS_UPDATED]: (state: JobQueryResult, action: Action<Job[]>) => {
-    console.info('Job updated:', action.payload);
     let byId = state.byId;
     for (const job of action.payload) {
+      // byId = byId.set(job.id, { ...byId.get(job.id), ...job }); // Merge?
       byId = byId.set(job.id, job);
     }
     return { ...state, byId };
   },
   [JOBS_DELETED]: (state: JobQueryResult, action: Action<string[]>) => {
-    console.info('Job deleted:', action.payload);
     let byId = state.byId;
+    let selected = state.selected;
     for (const jobId of action.payload) {
       byId = byId.delete(jobId);
+      if (selected === jobId) {
+        selected = null;
+      }
     }
-    return { ...state, byId, list: state.list.filter(id => byId.has(id)) };
+    return { ...state, byId, selected, list: state.list.filter(id => byId.has(id)) };
   },
   [SELECT_JOB]: (state: JobQueryResult, action: Action<number>) => {
     return { ...state, selected: action.payload };

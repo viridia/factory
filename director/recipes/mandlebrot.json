@@ -1,10 +1,11 @@
 {
   "type": "Job",
-  "name": "Mandlebrot",
+  "title": "Mandlebrot",
+  "description": "Recipe to compute images of the Mandlebrot set.",
   "params": [
     {
       "id": "frames",
-      "caption": "Frames",
+      "title": "Frames",
       "type": "range",
       "default": [1, 1]
     }
@@ -16,13 +17,11 @@
       "image": "",
       "args": [
       ],
-      "expand": {
-        "i": "{frames}",
+      "multiplicity": {
+        "i": "{frames}"
       },
-      "count": "{frames.length}",
-      "start": "{frames.start}",
       "outputs": [
-        "/images/image.{i}.jpg",
+        "/images/image.{i}.jpg"
       ]
     },
     {
@@ -42,8 +41,8 @@
         }
       ],
       "outputs": [
-        "/movies/movie.mp4",
-      ],
+        "/movies/movie.mp4"
+      ]
     }
   ]
 }

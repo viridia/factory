@@ -1,5 +1,5 @@
-import { Job, JobState } from 'common/types/api';
 import * as dateformat from 'dateformat';
+import { Job, JobState } from 'factory-common/types/api';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
