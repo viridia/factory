@@ -1,6 +1,6 @@
 import * as Ajv from 'ajv';
 import { NextFunction, Request, Response, Router } from 'express';
-import { Recipe } from 'factory-common/types/api';
+import { Recipe } from '../../common/types/api';
 import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */

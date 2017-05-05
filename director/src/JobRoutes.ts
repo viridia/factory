@@ -1,10 +1,10 @@
 import * as Ajv from 'ajv';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
-import { Job, JobChangeRequest, JobRequest, JobState } from 'factory-common/types/api';
-import { JobRecord } from 'factory-common/types/queue';
 import * as fs from 'fs';
 import * as Queue from 'rethinkdb-job-queue';
+import { Job, JobChangeRequest, JobRequest, JobState } from '../../common/types/api';
+import { JobRecord } from '../../common/types/queue';
 import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
@@ -120,6 +120,7 @@ export default class JobRoutes {
 
   private createJob(req: Request, res: Response, next: NextFunction): void {
     const jr = req.body as JobRequest;
+    console.info('create job', jr);
     if (!this.jobRequestSchema(jr)) {
       const errors = ajv.errorsText(this.jobRequestSchema.errors, { dataVar: 'JobRequest' });
       console.error(errors);

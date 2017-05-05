@@ -1,4 +1,4 @@
-import { Job, JobState } from 'factory-common/types/api';
+import { Job, JobState } from 'common/types/api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import { connect } from 'react-redux';

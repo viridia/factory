@@ -12,7 +12,9 @@
     ]
   },
   "include": [
-    "src/**/*"
+    "common/src/**/*",
+    "director/src/**/*",
+    "scheduler/src/**/*"
   ],
   "exclude": [
     "node_modules",

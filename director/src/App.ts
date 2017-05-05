@@ -1,9 +1,9 @@
 import * as bodyParser from 'body-parser';
 import * as deepstream from 'deepstream.io-client-js';
 import * as express from 'express';
-import { JobRecord } from 'factory-common/types/queue';
 import * as fs from 'fs';
 import * as Queue from 'rethinkdb-job-queue';
+import { JobRecord } from '../../common/types/queue';
 import config from './config';
 import ConfigRoutes from './ConfigRoutes';
 import JobRoutes from './JobRoutes';

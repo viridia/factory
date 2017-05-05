@@ -1,6 +1,8 @@
 const webpack = require('webpack');
 const path = require('path');
 
+process.chdir(__dirname);
+
 const debug = process.env.NODE_ENV !== 'production';
 const plugins = [
   new webpack.DefinePlugin({
@@ -23,7 +25,7 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    modules: ['src', 'node_modules'],
+    modules: ['src', '..', 'node_modules'],
   },
   devtool: debug ? 'source-map' : false,
   plugins,

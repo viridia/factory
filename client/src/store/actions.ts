@@ -1,4 +1,4 @@
-import { Job, JobRequest } from 'factory-common/types/api';
+import { Job, JobRequest } from 'common/types/api';
 import { Action, createAction } from 'redux-actions';
 import {
   CREATE_JOB_FAILED,
