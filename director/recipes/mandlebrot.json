@@ -12,16 +12,16 @@
   ],
   "steps": [
     {
-      "id": "render.{i}",
+      "id": "render.{{i}}",
       "title": "render",
       "image": "",
       "args": [
       ],
       "multiplicity": {
-        "i": "{frames}"
+        "i": "{{frames}}"
       },
       "outputs": [
-        "/images/image.{i}.jpg"
+        "/images/image.{{i}}.jpg"
       ]
     },
     {
@@ -30,14 +30,14 @@
       "image": "",
       "depends": [
         {
-          "$foreach": ["n", "{frames}", "render.{n}"]
+          "$foreach": ["n", "{{frames}}", "render.{{n}}"]
         }
       ],
       "args": [
       ],
       "inputs": [
         {
-          "$foreach": ["n", "{frames}", "/images/image.{n}.jpg"]
+          "$foreach": ["n", "{{frames}}", "/images/image.{{n}}.jpg"]
         }
       ],
       "outputs": [

@@ -29,19 +29,21 @@ export interface Param {
 export interface Step {
   id: string | object;
   title: string | object;
-  depends: Array<string | Expr>;
-  image: string;
-  args: Array<string | Expr>;
-  env: StrMap<string | Expr>;
-  expand: StrMap<Expr>;
-  inputs: Array<string | Expr>;
-  outputs: Array<string | Expr>;
+  depends?: Array<string | Expr>;
+  image?: string | Expr;
+  tool?: string | Expr;
+  args?: Array<string | Expr>;
+  env?: StrMap<string | Expr>;
+  multiplicity?: StrMap<Expr>;
+  inputs?: Array<string | Expr>;
+  outputs?: Array<string | Expr>;
+  weight?: number;
 }
 
 export interface Recipe {
   id: string;
   type?: string;
-  name: string;
+  title: string;
   params?: Param[];
   steps: Step[];
 }

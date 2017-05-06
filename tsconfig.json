@@ -12,7 +12,7 @@
     ]
   },
   "include": [
-    "common/src/**/*",
+    "common/**/*",
     "director/src/**/*",
     "scheduler/src/**/*"
   ],

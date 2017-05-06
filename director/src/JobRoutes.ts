@@ -112,7 +112,7 @@ export default class JobRoutes {
       user: req.query.user,
       project: req.query.project,
     }).then(jobList => {
-      res.json(jobList.map(this.serializeJob));
+      res.json(jobList.filter(job => job.project !== undefined).map(this.serializeJob));
     }, error => {
       console.error(error);
     });
@@ -152,13 +152,13 @@ export default class JobRoutes {
     });
   }
 
-  private getTask(req: Request, res: Response, next: NextFunction): void {
-    res.json({ message: `requesting task ${req.params.id}.` });
-  }
-
-  private queryTasks(req: Request, res: Response, next: NextFunction): void {
-    res.json({ message: 'requesting all tasks.' });
-  }
+  // private getTask(req: Request, res: Response, next: NextFunction): void {
+  //   res.json({ message: `requesting task ${req.params.id}.` });
+  // }
+  //
+  // private queryTasks(req: Request, res: Response, next: NextFunction): void {
+  //   res.json({ message: 'requesting all tasks.' });
+  // }
 
   private handleJobAdded(queueId: string, jobId: string) {
     this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
