@@ -1,4 +1,4 @@
-import { Job, JobState } from 'common/types/api';
+import { Job, RunState } from 'common/types/api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { connect } from 'react-redux';
@@ -69,15 +69,19 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
 
   private renderState(job: Job) {
     switch (job.state) {
-      case JobState.WAITING:
+      case RunState.WAITING:
         return <div className="waiting">WAITING</div>;
-      case JobState.RUNNING:
+      case RunState.READY:
+        return <div className="waiting">READY</div>;
+      case RunState.RUNNING:
         return <div className="running">RUNNING</div>;
-      case JobState.COMPLETED:
+      case RunState.COMPLETED:
         return <div className="completed">COMPLETED</div>;
-      case JobState.CANCELLED:
-        return <div className="canceled">CANCELLED</div>;
-      case JobState.FAILED:
+      case RunState.CANCELLING:
+        return <div className="cancelling">CANCELLING</div>;
+      case RunState.CANCELLED:
+        return <div className="cancelled">CANCELLED</div>;
+      case RunState.FAILED:
         return <div className="failed">FAILED</div>;
     }
   }

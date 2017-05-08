@@ -1,0 +1,135 @@
+#!/bin/bash
+BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MOUNT_PID_FILE=$BASEDIR/mount.pid
+PROXY_PID_FILE=$BASEDIR/proxy.pid
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: vm [command]"
+  echo "Valid commands are:"
+  echo "  mount - mount the project directory into the minikube vm."
+  echo "  unmount - unmount the project directory from the minikube vm."
+  echo "  build - build the development container."
+  echo "  start - start the development container."
+  echo "  stop - stop the development container."
+  echo "  shell - open a shell into the development container."
+  echo "  db start - start the database service."
+  echo "  db stop - stop the database service."
+  echo "  ds start - start the deepstream.io service."
+  echo "  ds stop - stop the deepstream.io service."
+  echo "  proxy start - start the proxy to the Kubernetes control port."
+  echo "  proxy stop - stop the proxy to the Kubernetes control port."
+
+  exit 1
+fi
+
+case $1 in
+  mount)
+    if [[ -e "$MOUNT_PID_FILE" ]]; then
+      kill $(cat $MOUNT_PID_FILE)
+    fi
+    minikube mount $BASEDIR > /dev/null &
+    MOUNT_PID=$!
+    echo $MOUNT_PID > $MOUNT_PID_FILE
+    echo "Mount successful, process id: $MOUNT_PID."
+    ;;
+
+  unmount)
+    if [[ -e "$MOUNT_PID_FILE" ]]; then
+      kill $(cat $MOUNT_PID_FILE)
+      rm $MOUNT_PID_FILE
+      echo "Unmounted."
+    fi
+    ;;
+
+  build)
+    WD=$(pwd)
+    cd $BASEDIR
+    docker build -f images/director-dev/Dockerfile --rm -t director:0.0.1 .
+    cd $WD
+    ;;
+
+  start)
+    kubectl create -f "$BASEDIR/config/director-dev.yml"
+    ;;
+
+  stop)
+    kubectl delete -f "$BASEDIR/config/director-dev.yml"
+    echo "Waiting for pod to terminate..."
+    kubectl get pod director > /dev/null 2> /dev/null
+    while [ $? -eq 0 ]; do
+      sleep 3
+      kubectl get pod director > /dev/null 2> /dev/null
+    done
+    ;;
+
+  shell)
+    kubectl exec -it director -- /bin/bash
+    ;;
+
+  db)
+    case $2 in
+      start)
+        kubectl create -f "$BASEDIR/config/rethinkdb-dev.yml"
+        ;;
+
+      stop)
+        kubectl delete -f "$BASEDIR/config/rethinkdb-dev.yml"
+        ;;
+
+      *)
+        echo "unrecognized db option: '$2'"
+        ;;
+
+    esac
+    ;;
+
+  ds)
+    case $2 in
+      start)
+        kubectl create -f "$BASEDIR/config/deepstream-dev.yml"
+        ;;
+
+      stop)
+        kubectl delete -f "$BASEDIR/config/deepstream-dev.yml"
+        ;;
+
+      *)
+        echo "unrecognized ds option: '$2'"
+        ;;
+
+    esac
+    ;;
+
+  proxy)
+    case $2 in
+      start)
+        if [[ -e "$PROXY_PID_FILE" ]]; then
+          kill $(cat $PROXY_PID_FILE)
+        fi
+        kubectl proxy --port 8077 &
+        PROXY_PID=$!
+        echo $PROXY_PID > $PROXY_PID_FILE
+        sleep 0.1
+        echo
+        ;;
+
+      stop)
+        if [[ -e "$PROXY_PID_FILE" ]]; then
+          kill $(cat $PROXY_PID_FILE)
+          rm $PROXY_PID_FILE
+          echo "Proxy stopped."
+        fi
+        ;;
+
+      *)
+        echo "unrecognized ds option: '$2'"
+        ;;
+
+    esac
+    ;;
+
+  *)
+    echo "unrecognized option: '$1'"
+    exit 1
+    ;;
+esac

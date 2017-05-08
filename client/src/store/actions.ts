@@ -1,4 +1,4 @@
-import { Job, JobRequest } from 'common/types/api';
+import { Job, JobQuery, JobRequest, Task } from 'common/types/api';
 import { Action, createAction } from 'redux-actions';
 import {
   CREATE_JOB_FAILED,
@@ -6,23 +6,38 @@ import {
   CREATE_JOB_REQUESTED,
   JOBS_ADDED,
   JOBS_DELETED,
+  JOBS_LIST_ERROR,
+  JOBS_LIST_RECEIVED,
+  JOBS_LIST_REQUESTED,
   JOBS_UPDATED,
-  RECEIVE_JOBS_ERROR,
-  RECEIVE_JOBS_LIST,
-  REQUEST_JOBS_LIST,
   SELECT_JOB,
+  SELECT_TASK,
   SET_ACTIVE_SUBSCRIPTIONS,
+  SET_JOB_SUBSCRIPTION,
+  TASK_LIST_CLEAR,
+  TASK_LIST_ERROR,
+  TASK_LIST_RECEIVED,
+  TASK_LIST_REQUESTED,
+  TASKS_CANCELLED,
+  TASKS_UPDATED,
 } from './actionIds';
-import { JobQuery } from './types/JobQuery';
 
 export const createJobRequested = createAction<undefined>(CREATE_JOB_REQUESTED);
 export const createJobOK = createAction<undefined>(CREATE_JOB_OK);
 export const createJobFailed = createAction<string>(CREATE_JOB_FAILED);
-export const jobsAdded = createAction<[Job]>(JOBS_ADDED);
-export const jobsDeleted = createAction<[string]>(JOBS_DELETED);
-export const jobsUpdated = createAction<[Job]>(JOBS_UPDATED);
-export const requestJobsList = createAction<undefined>(REQUEST_JOBS_LIST);
-export const receiveJobsList = createAction<undefined>(RECEIVE_JOBS_LIST);
-export const receiveJobsError = createAction<undefined>(RECEIVE_JOBS_ERROR);
-export const selectJob = createAction<JobQuery>(SELECT_JOB);
+export const jobsAdded = createAction<Job[]>(JOBS_ADDED);
+export const jobsDeleted = createAction<string[]>(JOBS_DELETED);
+export const jobsUpdated = createAction<Job[]>(JOBS_UPDATED);
+export const jobsListRequested = createAction<undefined>(JOBS_LIST_REQUESTED);
+export const jobsListReceived = createAction<undefined>(JOBS_LIST_RECEIVED);
+export const jobsListError = createAction<undefined>(JOBS_LIST_ERROR);
+export const selectJob = createAction<string>(SELECT_JOB);
+export const selectTask = createAction<string>(SELECT_TASK);
 export const setActiveSubscriptions = createAction<undefined>(SET_ACTIVE_SUBSCRIPTIONS);
+export const setJobSubscription = createAction<undefined>(SET_JOB_SUBSCRIPTION);
+export const taskListClear = createAction<undefined>(TASK_LIST_CLEAR);
+export const taskListRequested = createAction<undefined>(TASK_LIST_REQUESTED);
+export const taskListReceived = createAction<undefined>(TASK_LIST_RECEIVED);
+export const taskListError = createAction<undefined>(JOBS_LIST_ERROR);
+export const tasksCancelled = createAction<string[]>(TASKS_CANCELLED);
+export const tasksUpdated = createAction<Task[]>(TASKS_UPDATED);

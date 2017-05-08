@@ -1,12 +1,4 @@
-/** The execution state of a job or task. */
-export enum JobState {
-  WAITING,
-  RUNNING,
-  COMPLETED,
-  CANCELING,
-  CANCELLED,
-  FAILED,
-}
+import { RunState } from './RunState';
 
 /** Describes a queued render job. */
 export interface Job {
@@ -34,8 +26,11 @@ export interface Job {
   /** Text description of this job. */
   description: string;
 
+  /** Arguments specified by the user submitting the job. */
+  submissionArgs: { [key: string]: any };
+
   /** The current execution state of the job. */
-  state: JobState;
+  state: RunState;
 
   /** Timestamp when the job was initially created. */
   createdAt: Date;
@@ -50,8 +45,17 @@ export interface Job {
   tasksTotal: number;
 
   /** Number of tasks finished. */
-  tasksFinished: number;
+  tasksCompleted: number;
 
   /** Number of tasks that have failed unrecoverably. */
   tasksFailed: number;
+
+  /** The total amount of work, based on task weights. */
+  workTotal: number;
+
+  /** Amount of work completed. */
+  workCompleted: number;
+
+  /** Represents the amount of work in failed tasks. */
+  workFailed: number;
 }

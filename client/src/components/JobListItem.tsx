@@ -1,5 +1,5 @@
 import * as classnames from 'classnames';
-import { Job, JobState } from 'common/types/api';
+import { Job, RunState } from 'common/types/api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { ProgressBar } from 'react-bootstrap';
@@ -19,7 +19,6 @@ interface MappedProps {
   jobId: number;
   job: Job;
   selected: boolean;
-  dispatch: Dispatch<{}>;
   selectJob: (jobId: string) => void;
 }
 
@@ -35,11 +34,13 @@ class JobListItem extends React.Component<MappedProps, undefined> {
     return (
       <tr
           className={classnames('job-list-entry', {
-            running: job.state === JobState.RUNNING,
-            waiting: job.state === JobState.WAITING,
-            finished: job.state === JobState.COMPLETED,
-            canceled: job.state === JobState.CANCELLED,
-            failed: job.state === JobState.FAILED,
+            running: job.state === RunState.RUNNING,
+            ready: job.state === RunState.READY,
+            waiting: job.state === RunState.WAITING,
+            finished: job.state === RunState.COMPLETED,
+            cancelling: job.state === RunState.CANCELLING,
+            cancelled: job.state === RunState.CANCELLED,
+            failed: job.state === RunState.FAILED,
             selected,
           })}
           onClick={this.onClick}

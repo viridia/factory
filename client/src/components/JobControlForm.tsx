@@ -1,4 +1,4 @@
-import { Job, JobState } from 'common/types/api';
+import { Job, RunState } from 'common/types/api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import { connect } from 'react-redux';
@@ -26,10 +26,10 @@ class JobControlForm extends React.Component<JobControlFormProps, undefined> {
     if (!job) {
       return null;
     }
-    const canCancel = job.state === JobState.WAITING || job.state === JobState.RUNNING;
-    const canDelete = job.state === JobState.CANCELLED
-        || job.state === JobState.COMPLETED
-        || job.state === JobState.FAILED;
+    const canCancel = job.state === RunState.WAITING || job.state === RunState.RUNNING;
+    const canDelete = job.state === RunState.CANCELLED
+        || job.state === RunState.COMPLETED
+        || job.state === RunState.FAILED;
     return (
       <section className="job-control-form">
         {canCancel && <Button bsStyle="danger" onClick={this.onClickCancel}>Cancel</Button>}

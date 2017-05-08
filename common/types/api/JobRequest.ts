@@ -20,4 +20,7 @@ export interface JobRequest {
 
   /** Text description of this job. */
   description: string;
+
+  /** Arguments supplied by the user submitting the job. */
+  args?: { [key: string]: any };
 }

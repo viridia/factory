@@ -1,0 +1,12 @@
+# Source template for .bashrc
+
+# Useful aliases
+alias more="less"
+alias ls="ls --color=auto"
+
+# Bash function that prints the current GIT branch
+# git_branch() { git branch 2>/dev/null | grep '^*' | colrm 1 2; }
+
+# Bash prompt that includes the current git branch name
+# export PS1="\[\e[33m\][\u@\W: \[\e[36m\]\$(git_branch)\[\e[33m\]]:\[\e[m\] "
+export PS1="\[\e[33m\][\u@\W]:\[\e[m\] "

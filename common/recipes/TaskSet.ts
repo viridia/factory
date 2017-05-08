@@ -1,6 +1,6 @@
 import { Param, Recipe, Step } from '../types/api';
 import ExpressionEvaluator, { Env, Range } from './ExpressionEvaluator';
-import Task from './Task';
+import TaskData from './TaskData';
 
 /** A set of tasks generated from a recipe. */
 export default class TaskSet {
@@ -8,10 +8,11 @@ export default class TaskSet {
   public params: Param[];
   public steps: Step[];
   public userArgs: Env;
-  public taskMap: { [taskId: string]: Task };
-  public taskList: Task[];
+  public taskMap: { [taskId: string]: TaskData };
+  public taskList: TaskData[];
   public evaluator = new ExpressionEvaluator();
   private stepIndex: number;
+  private taskIndex: number;
 
   constructor(recipe: Recipe) {
     this.id = recipe.id;
@@ -29,6 +30,7 @@ export default class TaskSet {
   /** Evaluate the recipe and produce a set of tasks. */
   public createTasks() {
     this.stepIndex = 0;
+    this.taskIndex = 0;
     for (const step of this.steps) {
       if (step.multiplicity) {
         const iterables = [];
@@ -70,11 +72,12 @@ export default class TaskSet {
 
   /** Create a single task instance from a step definition. */
   private createTask(step: Step, env: Env) {
-    const task = new Task(
+    const task = new TaskData(
       this.evaluator.eval(step.id, env, 'string'),
       this.evaluator.eval(step.title, env, 'string'),
     );
-    task.stepIndex = this.stepIndex;
+    task.step = this.stepIndex;
+    task.index = this.taskIndex++;
     if (task.taskId in this.taskMap) {
       throw Error(`Task id "${task.taskId}" is not unique.`);
     }
@@ -123,10 +126,10 @@ export default class TaskSet {
         if (!prior) {
           throw Error(`Task "${task.taskId}" depends on non-existent task "${dep}".`);
         }
-        if (prior.stepIndex > task.stepIndex) {
+        if (prior.step > task.step) {
           throw Error(`Task "${task.taskId}" cannot depend on subsequent task "${dep}".`);
         }
-        if (prior.stepIndex === task.stepIndex) {
+        if (prior.step === task.step) {
           throw Error(`Task "${task.taskId}" cannot depend on task "${dep}" which is in the same step.`);
         }
         prior.dependents.push(task.taskId);

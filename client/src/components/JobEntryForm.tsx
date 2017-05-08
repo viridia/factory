@@ -87,6 +87,7 @@ class JobEntryForm extends React.Component<MappedProps, State> {
       mainFileName: this.state.inputFile,
       recipe: this.state.recipe,
       description: 'Render Mandlebrot',
+      args: { frames: [1, 10, 1] },
     }));
   }
 }

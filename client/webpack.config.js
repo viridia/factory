@@ -25,7 +25,10 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    modules: ['src', '..', 'node_modules'],
+    modules: [
+      path.resolve(__dirname, 'src'),
+      path.resolve(__dirname, 'node_modules'),
+    ],
   },
   devtool: debug ? 'source-map' : false,
   plugins,

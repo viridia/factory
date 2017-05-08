@@ -62,7 +62,6 @@ class JobList extends React.Component<MappedProps, undefined> {
   }
 
   public render() {
-    const { jobs } = this.props;
     return (
       <section className="items" onClick={this.onClick}>{this.renderListContent()}</section>
     );

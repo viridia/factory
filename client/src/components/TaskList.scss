@@ -1,3 +1,55 @@
-.task-list > .items {
-  margin: 4px;
+.task-list {
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  > .items {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 4px 0;
+    flex: 1;
+    > .task-list-table {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      font-size: 16px;
+      flex: 1;
+      overflow-y: hidden;
+      // line-height: 16px;
+      > header {
+        display: flex;
+        font-weight: bold;
+      }
+      > section {
+        flex: 1;
+        overflow-y: auto;
+        .task-row {
+          display: flex;
+          flex-direction: row;
+          align-items: flex-start;
+          cursor: pointer;
+          background-color: #eee;
+          user-select: none;
+          &:nth-child(even) {
+            background-color: #f7f7f7 ;
+          }
+          &:hover {
+            background-color: #ddd;
+          }
+          &.selected {
+            background-color: #aaf777 ;
+          }
+        }
+      }
+      .id {
+        width: 30%;
+        padding: 6px 8px;
+      }
+      .status {
+        flex: 1;
+        padding: 6px 8px;
+      }
+    }
+  }
 }

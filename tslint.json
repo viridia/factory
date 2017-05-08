@@ -5,7 +5,7 @@
     "interface-name": [true, "never-prefix"],
     "jsdoc-format": false,
     "jsx-no-multiline-js": false,
-    "no-console": [true, "log"],
+    "no-console": false,
     "no-var-requires": false,
     "no-unused-variable": [true],
     "object-literal-sort-keys": false,

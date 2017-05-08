@@ -14,8 +14,9 @@
     {
       "id": "render.{{i}}",
       "title": "render",
-      "image": "",
+      "image": "mandlebrot:0.0.1",
       "args": [
+        "frame", "{{i}}",
       ],
       "multiplicity": {
         "i": "{{frames}}"
@@ -27,7 +28,7 @@
     {
       "id": "shoot",
       "title": "shoot movie",
-      "image": "",
+      "image": "ffmpeg:v1",
       "depends": [
         {
           "$foreach": ["n", "{{frames}}", "render.{{n}}"]

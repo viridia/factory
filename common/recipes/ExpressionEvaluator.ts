@@ -1,15 +1,18 @@
 const fieldRegExp = /{{([A-Za-z_][A-Za-z0-9_]*)(?::(\d*))?}}/g;
 
+/** Enviroment containing named values. */
 export interface Env {
   [key: string]: any;
 }
 
+/** A range expression (start, end, step) */
 export interface Range {
   start: number;
   end: number;
   step?: number;
 }
 
+/** A string template substitution field. */
 interface Substitution {
   key: string;
   format: {
@@ -18,15 +21,16 @@ interface Substitution {
   };
 }
 
-interface OperatorMap {
+/** Dispatch table for operators like $foreach. */
+interface DispatchTable {
   [key: string]: (expr: any, env: Env) => any;
 }
 
 export default class ExpressionEvaluator {
-  private operators: OperatorMap;
+  private dispatchTable: DispatchTable;
 
   constructor() {
-    this.operators = {
+    this.dispatchTable = {
       $foreach: this.evalForeach.bind(this),
     };
   }
@@ -61,7 +65,7 @@ export default class ExpressionEvaluator {
           let foundOperator: string = null;
           let result: any;
           for (const key of Object.getOwnPropertyNames(expr)) {
-            const evalFn = this.operators[key];
+            const evalFn = this.dispatchTable[key];
             if (evalFn) {
               if (foundOperator) {
                 throw Error(`Conflicing operators: ${key} and ${foundOperator}`);

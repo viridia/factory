@@ -6,12 +6,17 @@
     "module": "commonjs",
     "target": "es6",
     "jsx": "react",
+    "baseUrl": "./src",
     "typeRoots": [
       "node_modules/@types",
       "node_modules/deepstream.io-client-ks/src"
     ]
   },
   "include": [
-    "./src/**/*"
+    "./src/**/*.ts",
+    "./src/**/*.tsx"
+  ],
+  "exclude": [
+    "./src/**/*.spec.ts"
   ]
 }

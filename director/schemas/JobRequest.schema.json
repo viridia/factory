@@ -35,6 +35,21 @@
     "description": {
       "description": "Textual description of this job.",
       "type": "string"
+    },
+    "args": {
+      "description": "Arguments to the recipe.",
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_]*$": {
+          "anyOf": [
+            { "type": "boolean" },
+            { "type": "number" },
+            { "type": "string" },
+            { "type": "array", "items": { "type": "number" } }
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": [

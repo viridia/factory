@@ -31,7 +31,7 @@ export default class Page extends React.Component<undefined, undefined> {
             </section>
             <section className="task-list border-panel">
               <header>Tasks</header>
-              <TaskList tasks={Immutable.List<Task>()} />
+              <TaskList />
             </section>
             <section className="task-details border-panel">
               <header>Task Details</header>

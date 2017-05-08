@@ -17,6 +17,15 @@
     font-size: 120%;
   }
 
+  .reference-box {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1;
+  }
+
   > .status-page {
     background-color: white;
     flex: 1;
@@ -57,15 +66,24 @@
       margin-right: 8px;
 
       > .job-details {
-        flex: 1;
+        display: flex;
+        flex-direction: column;
+        flex: 2;
+        flex-basis: 0;
       }
 
       > .task-list {
+        display: flex;
+        flex-direction: column;
         flex: 2;
+        flex-basis: 0;
       }
 
       > .task-details {
-        flex: 2;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        flex-basis: 0;
       }
     }
   }

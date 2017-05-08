@@ -1,5 +1,13 @@
 .job-details-table {
-  margin: 6px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  margin: 6px 0;
+  flex: 1;
+  tbody {
+    overflow-y: auto;
+  }
+
   th {
     text-align: right;
     padding: 3px 8px;

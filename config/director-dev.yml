@@ -6,13 +6,15 @@ spec:
   restartPolicy: Never
   containers:
     - name: director
-      image: 192.168.99.100:30127/factory.director:v1
+      image: director:0.0.1
+      imagePullPolicy: Never
+      # image: 192.168.99.100:30127/factory.director:v1
       stdin: true
       tty: true
       volumeMounts:
-        - mountPath: /usr/src/app
+        - mountPath: /usr/src/host
           name: src
   volumes:
     - name: src
       hostPath:
-        path: /home/talin/Projects/nimble/factory
+        path: /mount-9p/
