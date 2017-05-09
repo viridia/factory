@@ -85,14 +85,12 @@ export default class Scheduler {
       } else if (job.runState === RunState.CANCELLING) {
         this.cancelTasks(job, jobControl);
       } else {
-        this.updateJobStatus(job);
-        // TODO: Defer...
-        next(null, job);
+        this.updateJobStatus(job, jobControl);
       }
       // next(null, 'Job finished sucessfully.');
       onCancel(job, () => {
         // TODO: Do we want to move the logic from the director to here?
-        logger.info('Job canceled');
+        logger.info('Job cancelled');
       });
     });
 
@@ -102,17 +100,57 @@ export default class Scheduler {
       // OK folks here is where the rubber meets the road.
       // We're gonna have to call Kubernetes.
       if (task.runState === RunState.READY) {
-        task.runState = RunState.RUNNING;
-        task.update().then(() => {
-          this.emitJobEvent(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-        });
+        if (task.image) {
+          logger.info('Creating K8 Job:', task.taskId);
+          this.k8.createJob(task).then(resp => {
+            console.log(resp.data);
+            task.runState = RunState.RUNNING;
+            task.k8Link = resp.data.metadata.selfLink;
+            task.startedAt = new Date(resp.data.metadata.creationTimestamp);
+            task.update().then(() => {
+              this.emitJobEvent(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+            });
+            next(null, task);
+          }, error => {
+            task.runState = RunState.FAILED;
+            if (error.response && error.response.data) {
+              task.addLog(error.response.data.message);
+              logger.error(error.response.status, error.response.data.message);
+            } else {
+              // TODO: Handle other kinds of errors.
+            }
+            task.update().then(() => {
+              this.emitJobEvent(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+            });
+          });
+        } else {
+          // Task has no image, must have some other function.
+          // next(null, task);
+          task.runState = RunState.FAILED;
+          task.update().then(() => {
+            this.emitJobEvent(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+          });
+          logger.error(`Task ${task.jobId}:${task.taskId} is missing an action.`);
+        }
+      } else if (task.runState === RunState.CANCELLING) {
+        if (task.k8Link) {
+          this.k8.deleteJob(task).then(resp => {
+            console.log('cancelled response:', resp.data);
+            // task.runState = RunState.CANCELLED;
+            // next(null, task);
+          }, error => {
+            console.log('cancel failed:', error.response);
+          });
+        }
+      } else {
+        next(null, task);
       }
 
       // task.setDateEnable(new Date(Date.now() + 100));
-      next(null, task);
+      // next(null, task);
       // next(null, 'Job finished sucessfully.');
       onCancel(task, () => {
-        logger.info('Task canceled', task.status);
+        logger.info('Task cancelled', task.status);
         this.emitJobEvent(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
       });
     });
@@ -172,9 +210,9 @@ export default class Scheduler {
     });
   }
 
-  private updateJobStatus(job: JobRecord) {
-    let tasksCompleted = 0;
-    let tasksFailed = 0;
+  private updateJobStatus(job: JobRecord, jobControl: JobControl) {
+    const eternity = new Date(Date.now() + 1000 * 60 * 60 * 24  * 365 * 1000); // 1000 years
+    const soon = new Date(Date.now() + 100); // 100 ms
     let workTotal = 0;
     let workCompleted = 0;
     let workFailed = 0;
@@ -184,51 +222,111 @@ export default class Scheduler {
     const completedTasks: string[] = [];
     const failedTasks: string[] = [];
     const taskIdMap: { [key: string]: TaskRecord } = {};
-    this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
+    return this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
       for (const task of tasks) {
         taskIdMap[task.id] = task;
       }
       for (const task of tasks) {
         workTotal += task.weight || 0;
+        const depCounts = {
+          [RunState.WAITING]: 0,
+          [RunState.READY]: 0,
+          [RunState.RUNNING]: 0,
+          [RunState.CANCELLING]: 0,
+          [RunState.CANCELLED]: 0,
+          [RunState.COMPLETED]: 0,
+          [RunState.FAILED]: 0,
+        };
+        // For this task, summarize the state of its dependencies
+        for (const depId of task.depends) {
+          const dep = taskIdMap[depId];
+          depCounts[dep ? dep.runState : RunState.FAILED] += 1;
+        }
         switch (task.runState) {
           case RunState.WAITING:
-            let allFinished = true;
-            for (const depId of task.depends) {
-              const dep = taskIdMap[depId];
-              if (!dep || dep.runState !== RunState.COMPLETED) {
-                allFinished = false;
-                break;
-              }
-            }
-            if (allFinished) {
-              // TODO: Need to do more than this.
-              task.runState = RunState.READY;
-              task.setDateEnable(new Date(Date.now() + 100));
+            if (depCounts[RunState.CANCELLING] > 0 || depCounts[RunState.CANCELLED] > 0) {
+              // If any of our dependenies are cancelled, then this is too.
+              task.runState = RunState.CANCELLED;
               task.update();
+              this.taskQueue.cancelJob(task);
+              cancelledTasks.push(task.id);
+            } else if (depCounts[RunState.FAILED] > 0) {
+              // If any of our dependenies are failed, then this task is too.
+              task.runState = RunState.FAILED;
+              this.taskQueue.cancelJob(task);
+              task.update();
+              failedTasks.push(task.id);
+            } else if (depCounts[RunState.COMPLETED] === task.depends.length) {
+              // All dependencies completed.
+              task.runState = RunState.READY;
+              task.setDateEnable(soon);
               runningTasks.push(task.id);
             } else {
               waitingTasks.push(task.id);
             }
             break;
+          case RunState.READY:
           case RunState.RUNNING:
+            // Ready tasks are considerd running for purposes of determining overall job state.
             runningTasks.push(task.id);
             break;
           case RunState.CANCELLING:
+            // Tasks which are in the process of cancelling are treated as running for purposes
+            // of determining whether the job is finished or not.
+            runningTasks.push(task.id);
+            break;
           case RunState.CANCELLED:
             cancelledTasks.push(task.id);
             break;
           case RunState.COMPLETED:
-            tasksCompleted += 1;
             workCompleted += task.weight || 0;
             completedTasks.push(task.id);
             break;
           case RunState.FAILED:
-            tasksFailed += 1;
             workFailed += task.weight || 0;
             failedTasks.push(task.id);
             break;
         }
       }
+      job.workTotal = workTotal;
+      job.workCompleted = workCompleted;
+      job.workFailed = workFailed;
+      job.waitingTasks = waitingTasks;
+      job.runningTasks = runningTasks;
+      job.cancelledTasks = cancelledTasks;
+      job.completedTasks = completedTasks;
+      job.failedTasks = failedTasks;
+      if (job.failedTasks.length > 0) {
+        if (job.waitingTasks.length === 0 || job.runningTasks.length === 0) {
+          job.runState = RunState.FAILED;
+          const error = new JobError('canceled');
+          error.cancelJob = true;
+          jobControl.next(error);
+        } else {
+          job.setDateEnable(new Date(Date.now() + 1000 * 10));
+          jobControl.next(null, job);
+        }
+      } else if (job.cancelledTasks.length > 0) {
+        if (job.waitingTasks.length === 0 || job.runningTasks.length === 0) {
+          job.runState = RunState.CANCELLED;
+          job.update();
+          const error = new JobError('canceled');
+          error.cancelJob = true;
+          jobControl.next(error);
+        } else {
+          job.setDateEnable(new Date(Date.now() + 1000 * 10));
+          jobControl.next(null, job);
+        }
+      } else if (job.runningTasks.length === 0 && job.waitingTasks.length === 0) {
+        job.runState = RunState.COMPLETED;
+        job.update();
+        jobControl.next(null, 'completed');
+      } else {
+        // Still running
+        job.setDateEnable(eternity);
+        jobControl.next(null, job);
+      }
+      this.emitProjectJobEvent(job, { tasksUpdated: [JobRecord.serialize(job)] });
     });
   }
 

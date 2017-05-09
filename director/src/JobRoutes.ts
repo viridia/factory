@@ -58,7 +58,7 @@ export default class JobRoutes {
         return;
       }
       const job = jobs[0];
-      if (jcr.canceled) {
+      if (jcr.cancelled) {
         this.cancelJob(job, res);
       }
       res.end();
@@ -124,13 +124,10 @@ export default class JobRoutes {
       description: jr.description,
       submissionArgs: jr.args || {},
       runState: RunState.READY,
-      tasksTotal: 0,
-      tasksCompleted: 0,
-      tasksFailed: 0,
       waitingTasks: [],
       runningTasks: [],
       completedTasks: [],
-      canceledTasks: [],
+      cancelledTasks: [],
       failedTasks: [],
       workTotal: 0,
       workCompleted: 0,
@@ -177,12 +174,12 @@ export default class JobRoutes {
       });
       // return this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
       //   console.log(tasks);
-      //   return this.taskQueue.cancelJob(tasks).then(canceledTasks => {
-      //     return this.jobQueue.cancelJob(job.id).then(canceledJobs => {
+      //   return this.taskQueue.cancelJob(tasks).then(cancelledTasks => {
+      //     return this.jobQueue.cancelJob(job.id).then(cancelledJobs => {
       //       // this.emitJobEvent(job.id, {
-      //       //   tasksCancelled: canceledTasks.map((taskId: string) => ({ jobId: job.id, taskId })) });
+      //       //   tasksCancelled: cancelledTasks.map((taskId: string) => ({ jobId: job.id, taskId })) });
       //       this.emitProjectJobEvent(job, { jobsUpdated: [JobRecord.serialize(job)] });
-      //       console.info(`Job ${job.id} canceled.`);
+      //       console.info(`Job ${job.id} cancelled.`);
       //       res.end();
       //     }, (error: any) => {
       //       console.error(error);

@@ -28,4 +28,6 @@ export class TaskRecord extends Queue.Job {
   // public outputFilters: object[];
   public weight: number;
   public runState: RunState;
+  public startedAt?: Date;
+  public k8Link?: string; // Link to Kubernetes Job
 }

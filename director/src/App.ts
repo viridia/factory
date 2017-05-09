@@ -17,6 +17,7 @@ export default class App {
   public deepstream: deepstreamIO.Client;
   private jobQueue: Queue<JobRecord>;
   private taskQueue: Queue<TaskRecord>;
+  private db: any;
 
   constructor() {
     const [host, port] = process.env.RETHINKDB_HOST.split(':');
@@ -30,9 +31,9 @@ export default class App {
     });
 
     // Create the recipes table if it does not exist.
-    const r = this.jobQueue.r;
-    const db = r.db('Factory');
-    this.ensureTablesExist(db, ['Recipes']);
+    const r = (this.jobQueue as any).r; // TODO: Typescript compiler bug?
+    this.db = r.db(process.env.DB_NAME);
+    this.ensureTablesExist(this.db, ['Recipes']);
 
     // Install middlewares and routes
     this.middleware();
@@ -53,7 +54,7 @@ export default class App {
     router.use('/api/v1', apiRouter);
     new ConfigRoutes().apply(apiRouter);
     new JobRoutes(this.jobQueue, this.taskQueue, this.deepstream).apply(apiRouter);
-    new RecipeRoutes(this.jobQueue.r).apply(apiRouter);
+    new RecipeRoutes((this.jobQueue as any).r).apply(apiRouter);
 
     // Proxy frontend server.
     router.use('/', proxy(process.env.FRONTEND_PROXY_HOST));

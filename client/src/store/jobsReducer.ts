@@ -61,7 +61,7 @@ export function fetchJobs(query: JobQuery = {}) {
 export function cancelJob(jobId: string) {
   return (dispatch: Dispatch<{}>, getState: () => JobQueryResult) => {
     return axios.patch(`/api/v1/jobs/${jobId}`, {
-      canceled: true,
+      cancelled: true,
     }).catch((error: AxiosError) => {
       console.error(error);
       // TODO: Display error toast.

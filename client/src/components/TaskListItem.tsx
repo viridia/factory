@@ -41,7 +41,7 @@ class TaskListItem extends React.Component<MappedProps, undefined> {
       case RunState.CANCELLING:
         return <div className="status cancelling">CANCELLING</div>;
       case RunState.CANCELLED:
-        return <div className="status canceled">CANCELLED</div>;
+        return <div className="status cancelled">CANCELLED</div>;
       case RunState.FAILED:
         return <div className="status failed">FAILED</div>;
     }

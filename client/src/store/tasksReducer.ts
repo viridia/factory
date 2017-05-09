@@ -84,7 +84,7 @@ const tasksReducer = handleActions<TaskQueryResult>({
   },
   [TASKS_CANCELLED]: (state: TaskQueryResult, action: Action<string[]>) => {
     let byId = state.byId;
-    console.log('tasks canceled:', action.payload);
+    console.log('tasks cancelled:', action.payload);
     for (const taskId of action.payload) {
       // byId = byId.set(job.id, { ...byId.get(job.id), ...job }); // Merge?
       const task = byId.get(taskId);

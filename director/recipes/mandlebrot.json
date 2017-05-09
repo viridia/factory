@@ -16,7 +16,8 @@
       "title": "render",
       "image": "mandlebrot:0.0.1",
       "args": [
-        "frame", "{{i}}",
+        "Nimble",
+        "{{i}}"
       ],
       "multiplicity": {
         "i": "{{frames}}"

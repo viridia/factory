@@ -1,5 +1,4 @@
 {
-  "$schema": "http://json-schema.org/draft-06/schema#",
   "id": "http://nimblecollective.com/schemas/JobRequest.schema.json",
   "type": "object",
   "title": "JobRequest",

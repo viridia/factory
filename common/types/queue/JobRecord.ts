@@ -18,9 +18,10 @@ export class JobRecord extends Queue.Job {
       createdAt: record.dateCreated,
       startedAt: record.dateStarted,
       endedAt: record.dateFinished,
-      tasksTotal: 0,
-      tasksCompleted: record.progress,
-      tasksFailed: 0,
+      tasksTotal: record.waitingTasks.length + record.runningTasks.length +
+        record.cancelledTasks.length + record.completedTasks.length + record.failedTasks.length,
+      tasksCompleted: record.completedTasks.length,
+      tasksFailed: record.failedTasks.length,
       workTotal: record.workTotal,
       workCompleted: record.workCompleted,
       workFailed: record.workFailed,
@@ -34,15 +35,12 @@ export class JobRecord extends Queue.Job {
   public mainFileName: string;
   public recipe: string;
   public description: string;
-  public tasksTotal: number;
   public submissionArgs: { [key: string]: any };
   public runState: RunState;
-  public tasksCompleted: number;
-  public tasksFailed: number;
   public waitingTasks: string[];  // Task ids whose dependencies haven't been met.
   public runningTasks: string[];  // Task ids that are running
   public completedTasks: string[]; // Task ids that are finished successfully
-  public canceledTasks: string[]; // Task ids that have been canceled
+  public cancelledTasks: string[]; // Task ids that have been cancelled
   public failedTasks: string[];   // Task ids that have failed
   public workTotal: number;       // Total amount of work, as computed from task weights;
   public workCompleted: number;   // Amount of work completed.
