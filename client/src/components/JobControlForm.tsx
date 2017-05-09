@@ -26,7 +26,9 @@ class JobControlForm extends React.Component<JobControlFormProps, undefined> {
     if (!job) {
       return null;
     }
-    const canCancel = job.state === RunState.WAITING || job.state === RunState.RUNNING;
+    const canCancel = job.state === RunState.WAITING
+        || job.state === RunState.READY
+        || job.state === RunState.RUNNING;
     const canDelete = job.state === RunState.CANCELLED
         || job.state === RunState.COMPLETED
         || job.state === RunState.FAILED;

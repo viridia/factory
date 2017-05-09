@@ -2,8 +2,11 @@ import * as Ajv from 'ajv';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as Queue from 'rethinkdb-job-queue';
-import { Job, JobChangeRequest, JobRequest, RunState, Task } from '../../common/types/api';
+import {
+  Job, JobChangeNotification, JobChangeRequest, JobRequest, RunState, Task,
+} from '../../common/types/api';
 import { JobRecord, TaskRecord } from '../../common/types/queue';
+import { logger } from './logger';
 import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
@@ -21,9 +24,6 @@ export default class JobRoutes {
     this.jobRequestSchema = loadSchema('./schemas/JobRequest.schema.json');
     this.deepstream = deepstream;
     this.jobQueue = jobQueue;
-    // this.jobQueue.on('added', this.handleJobAdded.bind(this));
-    // this.jobQueue.on('updated', this.handleJobUpdated.bind(this));
-    // this.jobQueue.on('cancelled', this.handleJobUpdated.bind(this));
     this.taskQueue = taskQueue;
     this.routes();
   }
@@ -73,21 +73,25 @@ export default class JobRoutes {
         return;
       }
       const job = jobs[0];
-      if (job.runState !== RunState.RUNNING) {
+      if (job.runState !== RunState.RUNNING || job.status === 'cancelled') {
+        if (job.runState === RunState.RUNNING) {
+          logger.warn(`Removing erroneously running job: ${job.id}.`);
+        }
         this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
           return this.taskQueue.removeJob(tasks).then(removedTasks => {
             return this.jobQueue.removeJob(req.params.id).then(removedJobs => {
-              console.info(`Job ${job.id} removed.`);
-              this.emitProjectJobEvent(job, { jobsDeleted: [job.id] });
+              logger.info(`Job ${job.id} removed.`);
+              this.notifyJobChange(job, { jobsDeleted: [job.id] });
               res.end();
             });
           });
         }, (error: any) => {
-          console.error(error);
+          logger.error(`Error removing job ${job.id}:`, error);
           res.status(500).json({ error: 'internal', message: error.message });
         });
       } else {
-        console.error(`Attempted to remove job ${job.id} that was running`);
+        logger.error(`Attempted to remove job ${job.id} that was running.`);
+        logger.error(`Run state: ${RunState[job.runState]}.`);
         res.status(400).json({ error: 'not-stopped' });
       }
     });
@@ -101,16 +105,15 @@ export default class JobRoutes {
       res.json(jobList.filter(job => job.project !== undefined).map(JobRecord.serialize));
     }, error => {
       res.status(500).json({ error: 'internal', message: error.message });
-      console.error(error);
+      logger.error(`Error running job query:`, error);
     });
   }
 
   private createJob(req: Request, res: Response, next: NextFunction): void {
     const jr = req.body as JobRequest;
-    // console.info('create job', jr);
     if (!this.jobRequestSchema(jr)) {
       const errors = ajv.errorsText(this.jobRequestSchema.errors, { dataVar: 'JobRequest' });
-      console.error(errors);
+      logger.error(`Schema validation errors:`, errors);
       res.status(400).json({ error: 'validation', message: errors });
       return;
     }
@@ -135,11 +138,11 @@ export default class JobRoutes {
     });
     this.jobQueue.addJob(job).then(jobRecords => {
       const record = jobRecords[0];
-      this.emitProjectJobEvent(job, { jobsAdded: [JobRecord.serialize(record)] });
+      this.notifyJobChange(job, { jobsAdded: [JobRecord.serialize(record)] });
       res.json({ message: 'posting a new job.', job: record.id });
-      console.info('Job created:', jobRecords[0].id);
+      logger.info('Job created:', jobRecords[0].id);
     }, error => {
-      console.error(error);
+      logger.error(`Error adding job:`, error);
       res.status(500).json({ error: 'internal', message: error.message });
     });
   }
@@ -152,7 +155,7 @@ export default class JobRoutes {
       res.json(taskList.map(TaskRecord.serialize));
     }, error => {
       res.status(500).json({ error: 'internal', message: error.message });
-      console.error(error);
+      logger.error(`Error getting job tasks:`, error);
     });
   }
 
@@ -166,55 +169,22 @@ export default class JobRoutes {
 
   private cancelJob(job: JobRecord, res: Response) {
     if (job.runState === RunState.RUNNING) {
-    // } else if (job.status === 'active' || job.status === 'waiting') {
       job.runState = RunState.CANCELLING;
       job.setDateEnable(new Date());
       job.update().then(() => {
-        this.emitProjectJobEvent(job, { jobsUpdated: [JobRecord.serialize(job)] });
+        this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
       });
-      // return this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
-      //   console.log(tasks);
-      //   return this.taskQueue.cancelJob(tasks).then(cancelledTasks => {
-      //     return this.jobQueue.cancelJob(job.id).then(cancelledJobs => {
-      //       // this.emitJobEvent(job.id, {
-      //       //   tasksCancelled: cancelledTasks.map((taskId: string) => ({ jobId: job.id, taskId })) });
-      //       this.emitProjectJobEvent(job, { jobsUpdated: [JobRecord.serialize(job)] });
-      //       console.info(`Job ${job.id} cancelled.`);
-      //       res.end();
-      //     }, (error: any) => {
-      //       console.error(error);
-      //       res.status(500).json({ error: 'internal', message: error.message });
-      //     });
-      //   });
-      // });
     } else {
-      console.error(`Attempted to cancel job ${job.id} that was not running`, job.status);
+      logger.error(`Attempted to cancel job ${job.id} that was not running`, job.status);
       res.status(400).json({ error: 'not-running' });
     }
   }
 
-  // private handleJobAdded(queueId: string, jobId: string) {
-  //   this.jobQueue.getJob(jobId).then((jobs: [JobRecord]) => {
-  //     const job = jobs[0];
-  //     // TODO: Also post to user's channel?
-  //     this.emitProjectJobEvent(job, { jobsAdded: [JobRecord.serialize(job)] });
-  //   });
-  // }
-  //
-  // private handleJobUpdated(queueId: string, jobId: string) {
-  //   console.info('job updated:', jobId);
-  //   this.jobQueue.getJob(jobId).then((jobs: JobRecord[]) => {
-  //     const job = jobs[0];
-  //     // All jobs on single per-project channel.
-  //     this.emitProjectJobEvent(job, { jobsUpdated: [JobRecord.serialize(job)] });
-  //   });
-  // }
-
-  private emitProjectJobEvent(job: JobRecord, payload: any) {
+  private notifyJobChange(job: JobRecord, payload: JobChangeNotification) {
     this.deepstream.event.emit(`project.${job.project}.jobs`, payload);
   }
 
-  private emitJobEvent(jobId: string, payload: any) {
+  private notifyTaskChange(jobId: string, payload: any) {
     this.deepstream.event.emit(`jobs.${jobId}`, payload);
   }
 }

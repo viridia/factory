@@ -47,6 +47,7 @@ class JobList extends React.Component<MappedProps, undefined> {
             <th width="20%">Created</th>
             <th>User</th>
             <th>File</th>
+            <th>State</th>
             <th width="40%">Progress</th>
           </thead>
           <tbody>

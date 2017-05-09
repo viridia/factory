@@ -41,7 +41,7 @@ export default class K8 {
   // []
 
   public createJob(task: TaskRecord) {
-    const name = `${task.jobId}:${task.taskId}`;
+    const name = `factory-${task.taskId}-${task.jobId}`;
     return this.axios.post(JOBS_PATH, {
       kind: 'Job',
       metadata: { name },
@@ -68,10 +68,19 @@ export default class K8 {
     }).then(resp => {
       // console.log(resp);
       return resp;
+      // TODO: normalize errors.
     });
   }
 
   public deleteJob(task: TaskRecord) {
     return this.axios.delete(task.k8Link);
+    // TODO: normalize errors.
+  }
+
+  public getJobStatus(task: TaskRecord) {
+    return this.axios.get(task.k8Link).then(resp => {
+      return resp.data;
+      // TODO: normalize errors.
+    });
   }
 }

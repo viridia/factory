@@ -9,7 +9,7 @@ Various components:
 * Client: Web client which shows current jobs and allows submitting new jobs.
 * (TBW)
 
-## Running
+## Building and running
 
 Start the local Kubernetes cluster:
 
@@ -23,9 +23,9 @@ Note that you must do this in every shell in which you plan to run docker comman
 The script 'vm' in the project directory has a lot of useful features for starting and stopping
 the various services.
 
-Build the docker image for the director:
+<!-- Build the docker image for the director:
 
-    vm build
+    vm build -->
 
 In another shell window, mount your current development directory into the minikube VM:
 

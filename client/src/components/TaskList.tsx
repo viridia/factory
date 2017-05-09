@@ -87,7 +87,6 @@ class TaskList extends React.Component<MappedProps, undefined> {
   }
 
   public render() {
-    console.log('rendering tasks');
     return (
       <section className="items" onClick={this.onClick}>{this.renderListContent()}</section>
     );

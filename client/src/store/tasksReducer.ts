@@ -70,7 +70,7 @@ const tasksReducer = handleActions<TaskQueryResult>({
   },
   [TASKS_UPDATED]: (state: TaskQueryResult, action: Action<Task[]>) => {
     let byId = state.byId;
-    console.log('tasks updated:', action.payload.map(task => task.id));
+    // console.log('tasks updated:', action.payload.map(task => task.id));
     for (const task of action.payload) {
       // byId = byId.set(job.id, { ...byId.get(job.id), ...job }); // Merge?
       if (byId.has(task.id)) {

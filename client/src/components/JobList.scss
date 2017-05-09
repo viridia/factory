@@ -20,16 +20,32 @@
         background-color: #ddd;
       }
       &.selected {
-        background-color: #aaf777 ;
+        background-color: #caf7a7;
+      }
+      &.ready .state > .pill {
+        background-color: #be7;
+      }
+      &.running .state > .pill {
+        background-color: #7c7;
+      }
+      &.failed .state > .pill {
+        background-color: #faa;
       }
     }
     td, th {
-      text-align: left;
+      text-align: center;
       padding: 3px 6px;
       border-width: 0;
       vertical-align: middle;
       line-height: 22px;
       white-space: nowrap;
+      &.state {
+        padding: 1px 3px;
+        > .pill {
+          border-radius: 4px;
+          padding: 1px 6px;
+        }
+      }
     }
     .job-progress > .progress {
       margin: 2px;

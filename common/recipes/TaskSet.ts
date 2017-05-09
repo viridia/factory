@@ -84,6 +84,9 @@ export default class TaskSet {
     if (step.depends) {
       task.depends = this.ensureUnique(this.evaluator.evalArray(step.depends, env, 'string'));
     }
+    if (step.image) {
+      task.image = this.evaluator.eval(step.image, env, 'string');
+    }
     if (step.args) {
       task.args = this.evaluator.evalArray(step.args, env, 'string');
     }

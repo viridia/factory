@@ -4,6 +4,11 @@ import { Job, RunState } from '../api';
 /** Data structure of a Job as it is stored in the database. */
 export class JobRecord extends Queue.Job {
   public static serialize(record: JobRecord): Job {
+    let runState = record.runState;
+    if (record.status === 'cancelled' &&
+        (runState === RunState.READY || runState === RunState.RUNNING)) {
+      runState = RunState.CANCELLED;
+    }
     return {
       id: record.id,
       user: record.user,
@@ -14,14 +19,17 @@ export class JobRecord extends Queue.Job {
       recipe: record.recipe,
       description: record.description,
       submissionArgs: record.submissionArgs,
-      state: record.runState,
+      state: runState,
       createdAt: record.dateCreated,
       startedAt: record.dateStarted,
       endedAt: record.dateFinished,
-      tasksTotal: record.waitingTasks.length + record.runningTasks.length +
-        record.cancelledTasks.length + record.completedTasks.length + record.failedTasks.length,
-      tasksCompleted: record.completedTasks.length,
-      tasksFailed: record.failedTasks.length,
+      tasksTotal: (record.waitingTasks || []).length +
+        (record.runningTasks || []).length +
+        (record.cancelledTasks || []).length +
+        (record.completedTasks || []).length +
+        (record.failedTasks || []).length,
+      tasksCompleted: (record.completedTasks || []).length,
+      tasksFailed: (record.failedTasks || []).length,
       workTotal: record.workTotal,
       workCompleted: record.workCompleted,
       workFailed: record.workFailed,
@@ -46,5 +54,4 @@ export class JobRecord extends Queue.Job {
   public workCompleted: number;   // Amount of work completed.
   public workFailed: number;      // Amount of work failed.
   public cancelRequested?: boolean;
-  public tasksCreated?: boolean;
 }

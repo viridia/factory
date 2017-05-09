@@ -31,27 +31,22 @@ class JobListItem extends React.Component<MappedProps, undefined> {
 
   public render() {
     const { job, selected } = this.props;
+    console.log(job);
+    const finishedProgress = 100 * job.workCompleted / Math.min(job.workTotal, 1);
+    const failedProgress = 100 * job.workFailed / Math.min(job.workTotal, 1);
     return (
       <tr
-          className={classnames('job-list-entry', {
-            running: job.state === RunState.RUNNING,
-            ready: job.state === RunState.READY,
-            waiting: job.state === RunState.WAITING,
-            finished: job.state === RunState.COMPLETED,
-            cancelling: job.state === RunState.CANCELLING,
-            cancelled: job.state === RunState.CANCELLED,
-            failed: job.state === RunState.FAILED,
-            selected,
-          })}
+          className={classnames('job-list-entry', RunState[job.state].toLowerCase(), { selected } )}
           onClick={this.onClick}
       >
         <td className="created">{dateformat(job.createdAt, 'brief')}</td>
         <td className="user">{job.username}</td>
         <td className="file">{job.mainFileName}</td>
+        <td className="state"><div className="pill">{RunState[job.state]}</div></td>
         <td className="job-progress">
           <ProgressBar>
-            <ProgressBar striped={true} active={true} bsStyle="success" now={50} />
-            <ProgressBar bsStyle="danger" now={10} />
+            <ProgressBar striped={true} active={true} bsStyle="success" now={finishedProgress} />
+            <ProgressBar bsStyle="danger" now={failedProgress} />
           </ProgressBar>
         </td>
       </tr>
