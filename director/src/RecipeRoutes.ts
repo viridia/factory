@@ -76,7 +76,8 @@ export default class JobRoutes {
       return;
     }
     recipe.id = req.params.id;
-    this.r.db('Factory').table('Recipes').replace(recipe).then((result: any) => {
+    this.r.db(process.env.DB_NAME).table('Recipes').insert(recipe, { conflict: 'replace' })
+    .then((result: any) => {
       if (result.errors) {
         console.error('error inserting recipe:', result.first_error);
         res.status(500).json({ error: 'internal', message: result.first_error });

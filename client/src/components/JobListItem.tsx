@@ -32,8 +32,18 @@ class JobListItem extends React.Component<MappedProps, undefined> {
   public render() {
     const { job, selected } = this.props;
     console.log(job);
-    const finishedProgress = 100 * job.workCompleted / Math.min(job.workTotal, 1);
-    const failedProgress = 100 * job.workFailed / Math.min(job.workTotal, 1);
+    let finishedProgress = 0;
+    let failedProgress = 0;
+    if (job.workTotal <= 0) {
+      if (job.state === RunState.FAILED) {
+        failedProgress = 100;
+      } else if (job.state === RunState.COMPLETED) {
+        finishedProgress = 100;
+      }
+    } else {
+      finishedProgress = 100 * job.workCompleted / Math.min(job.workTotal, 1);
+      failedProgress = 100 * job.workFailed / Math.min(job.workTotal, 1);
+    }
     return (
       <tr
           className={classnames('job-list-entry', RunState[job.state].toLowerCase(), { selected } )}

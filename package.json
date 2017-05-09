@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build-image-mandlebrot": "cd images/mandlebrot && docker build --rm -f Dockerfile -t mandlebrot:0.0.1 .",
+    "director": "ts-node ./director/src/index.ts",
     "start-client": "cd client && node devServer.js",
     "start-director": "nodemon --exec ./node_modules/.bin/ts-node -- ./director/src/index.ts",
     "start-scheduler": "nodemon --exec ./node_modules/.bin/ts-node -- ./scheduler/src/index.ts",

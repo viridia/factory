@@ -7,6 +7,7 @@ import { JobRecord, TaskRecord } from '../../common/types/queue';
 import config from './config';
 import ConfigRoutes from './ConfigRoutes';
 import JobRoutes from './JobRoutes';
+import { logger } from './logger';
 import RecipeRoutes from './RecipeRoutes';
 
 // Use require for imports where there is no type library.
@@ -20,7 +21,8 @@ export default class App {
   private db: any;
 
   constructor() {
-    const [host, port] = process.env.RETHINKDB_HOST.split(':');
+    const host = process.env.RETHINKDB_PROXY_SERVICE_HOST;
+    const port = process.env.RETHINKDB_PROXY_SERVICE_PORT;
     this.express = express();
     this.deepstream = deepstream(process.env.DEEPSTREAM_HOST).login();
     this.jobQueue = new Queue<JobRecord>({ host, port, db: process.env.DB_NAME }, {
@@ -68,7 +70,8 @@ export default class App {
     db.tableList().then((tables: string[]) => {
       for (const tableName of tableNames) {
         if (tables.indexOf(tableName) < 0) {
-          promises.push(db.tableCreate(tableName)); // Let exception propagate
+          logger.info(`Creating table "${tableName}"`);
+          promises.push(db.tableCreate(tableName).run()); // Let exception propagate
         }
       }
     });

@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 // Utility used to upload recipes to the director server.
 const dotenv = require('dotenv');
 const fs = require('fs');
