@@ -29,7 +29,6 @@ export function updateProjectSubscriptions(projectIds: Immutable.Set<number>) {
         if (!projectIds.has(projectId)) {
           globals.deepstream.event.unsubscribe(`project.${projectId}.jobs`, callback);
           mutable.delete(projectId);
-          console.info('removing subscription:', projectId);
         }
       });
       // Add new subscriptions that are not present in the map of current active subscriptions.
@@ -78,7 +77,6 @@ export function updateJobSubscriptions(jobId: string) {
           }
         };
         globals.deepstream.event.subscribe(`jobs.${jobId}`, callback);
-        console.log(`subscribing to: jobs.${jobId}`);
         dispatch(setJobSubscription([jobId, callback]));
       } else {
         dispatch(setJobSubscription([null, null]));

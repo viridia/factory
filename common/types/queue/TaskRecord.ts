@@ -9,7 +9,13 @@ export class TaskRecord extends Queue.Job {
       jobId: record.jobId,
       step: record.step,
       index: record.index,
+      depends: record.depends,
       state: record.runState,
+      startedAt: record.startedAt,
+      endedAt: record.dateFinished,
+      outputs: record.outputs,
+      image: record.image,
+      args: record.args,
     };
   }
 

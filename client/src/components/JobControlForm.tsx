@@ -36,6 +36,8 @@ class JobControlForm extends React.Component<JobControlFormProps, undefined> {
       <section className="job-control-form">
         {canCancel && <Button bsStyle="danger" onClick={this.onClickCancel}>Cancel</Button>}
         {canDelete && <Button bsStyle="danger" onClick={this.onClickDelete}>Remove</Button>}
+        <span className="flex" />
+        <Button bsStyle="default">View Logs</Button>
       </section>
     );
   }

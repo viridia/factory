@@ -16,6 +16,16 @@ interface MappedProps {
   selectJob: (jobId: string) => void;
 }
 
+function compareJobs(a: Job, b: Job) {
+  if (a.createdAt < b.createdAt) {
+    return 1;
+  } else if (a.createdAt > b.createdAt) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
 /** Displays the current list of jobs. */
 class JobList extends React.Component<MappedProps, undefined> {
   constructor() {
@@ -38,9 +48,10 @@ class JobList extends React.Component<MappedProps, undefined> {
 
   public renderListContent() {
     const { list, byId, error, loading, selected } = this.props.jobs;
+    const jobList = list.map(id => byId.get(id)).sort(compareJobs);
     if (error) {
       return <div className="error">{error}</div>;
-    } else if (list.length > 0) {
+    } else if (jobList.length > 0) {
       return (
         <table className="job-list-table">
           <thead>
@@ -51,7 +62,7 @@ class JobList extends React.Component<MappedProps, undefined> {
             <th width="40%">Progress</th>
           </thead>
           <tbody>
-            {list.map(id => <JobListItem jobId={id} selected={id === selected} />)}
+            {jobList.map(job => <JobListItem job={job} selected={job.id === selected} />)}
           </tbody>
         </table>
       );

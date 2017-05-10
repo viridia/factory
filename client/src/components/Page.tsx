@@ -6,6 +6,7 @@ import JobDetails from './JobDetails';
 import JobEntryForm from './JobEntryForm';
 import JobList from './JobList';
 import './Page.scss';
+import TaskDetails from './TaskDetails';
 import TaskList from './TaskList';
 
 export default class Page extends React.Component<undefined, undefined> {
@@ -19,9 +20,10 @@ export default class Page extends React.Component<undefined, undefined> {
               <header>Jobs</header>
               <JobList />
             </section>
-            <footer className="job-form border-panel">
-              <JobEntryForm />
-            </footer>
+            <section className="task-list border-panel">
+              <header>Tasks</header>
+              <TaskList />
+            </section>
           </section>
           <section className="task-panel">
             <section className="job-details border-panel">
@@ -29,15 +31,15 @@ export default class Page extends React.Component<undefined, undefined> {
               <JobDetails />
               <JobControlForm />
             </section>
-            <section className="task-list border-panel">
-              <header>Tasks</header>
-              <TaskList />
-            </section>
             <section className="task-details border-panel">
               <header>Task Details</header>
+              <TaskDetails />
             </section>
           </section>
         </section>
+        <footer className="job-form border-panel">
+          <JobEntryForm />
+        </footer>
       </section>
     );
   }

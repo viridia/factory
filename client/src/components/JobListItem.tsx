@@ -10,13 +10,12 @@ import { selectJob } from '../store/actions';
 
 // Props passed in from parent component
 interface DispatchProps {
-  jobId: number;
+  job: Job;
   selected: boolean;
 }
 
 // Props after being transformed by connect().
 interface MappedProps {
-  jobId: number;
   job: Job;
   selected: boolean;
   selectJob: (jobId: string) => void;
@@ -31,7 +30,6 @@ class JobListItem extends React.Component<MappedProps, undefined> {
 
   public render() {
     const { job, selected } = this.props;
-    console.log(job);
     let finishedProgress = 0;
     let failedProgress = 0;
     if (job.workTotal <= 0) {
@@ -71,7 +69,7 @@ class JobListItem extends React.Component<MappedProps, undefined> {
 }
 
 export default connect<DispatchProps, MappedProps, any>(
-  (state, ownProps) => ({ ...ownProps, job: state.jobs.byId.get(ownProps.jobId) }),
+  undefined,
   (dispatch, ownProps) => bindActionCreators({ selectJob }, dispatch),
   undefined,
   { pure: true },

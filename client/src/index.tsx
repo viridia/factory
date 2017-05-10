@@ -10,7 +10,7 @@ import globals from './globals';
 import store from './store';
 
 document.addEventListener('DOMContentLoaded', () => {
-  dateformat.masks.brief = 'm/d/yy h:MM TT';
+  dateformat.masks.brief = 'm/d/yyyy h:MM TT';
   // TODO(talin) - get this URL from the backend.
   axios.get('/api/v1/config').then(resp => {
     globals.hosts = resp.data.hosts;

@@ -19,6 +19,7 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
     if (!job) {
       return <div />;
     }
+    const stateName = RunState[job.state];
     return (
       <table className="job-details-table">
         <tbody>
@@ -32,7 +33,7 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
           </tr>
           <tr>
             <th>State</th>
-            <td>{this.renderState(job)}</td>
+            <td><div className={stateName.toLowerCase()}>{stateName}</div></td>
           </tr>
           <tr>
             <th>Created</th>
@@ -62,28 +63,17 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
             <th>Recipe</th>
             <td>{job.recipe}</td>
           </tr>
+          <tr>
+            <th>Tasks Completed</th>
+            <td>{job.tasksCompleted} / {job.tasksTotal} (work {job.workCompleted} / {job.workTotal})</td>
+          </tr>
+          <tr>
+            <th>Tasks Failed</th>
+            <td>{job.tasksFailed} / {job.tasksTotal} (work {job.workFailed} / {job.workTotal})</td>
+          </tr>
         </tbody>
       </table>
     );
-  }
-
-  private renderState(job: Job) {
-    switch (job.state) {
-      case RunState.WAITING:
-        return <div className="waiting">WAITING</div>;
-      case RunState.READY:
-        return <div className="waiting">READY</div>;
-      case RunState.RUNNING:
-        return <div className="running">RUNNING</div>;
-      case RunState.COMPLETED:
-        return <div className="completed">COMPLETED</div>;
-      case RunState.CANCELLING:
-        return <div className="cancelling">CANCELLING</div>;
-      case RunState.CANCELLED:
-        return <div className="cancelled">CANCELLED</div>;
-      case RunState.FAILED:
-        return <div className="failed">FAILED</div>;
-    }
   }
 }
 

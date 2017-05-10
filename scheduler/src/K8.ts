@@ -19,32 +19,15 @@ export default class K8 {
     });
   }
 
-  // Response
-  // { kind: 'Job',
-  //   apiVersion: 'batch/v1',
-  //   metadata:
-  //    { name: 'mandlebrot-sample',
-  //      namespace: 'default',
-  //      selfLink: '/apis/batch/v1/namespaces/default/jobs/mandlebrot-sample',
-  //      uid: 'b344ae5a-342f-11e7-bddf-080027186927',
-  //      resourceVersion: '121929',
-  //      creationTimestamp: '2017-05-08T20:48:33Z',
-  //      labels:
-  //       { 'controller-uid': 'b344ae5a-342f-11e7-bddf-080027186927',
-  //         'job-name': 'mandlebrot-sample' } },
-  //   spec:
-  //    { parallelism: 1,
-  //      completions: 1,
-  //      selector: { matchLabels: [Object] },
-  //      template: { metadata: [Object], spec: [Object] } },
-  //   status: {} }
-  // []
-
   public createJob(task: TaskRecord) {
     const name = `factory-${task.taskId}-${task.jobId}`;
     return this.axios.post(JOBS_PATH, {
       kind: 'Job',
-      metadata: { name },
+      metadata: {
+        name,
+        'factory.job': task.jobId,
+        'factory.task': task.taskId,
+      },
       spec: {
         template: {
           metadata: {
