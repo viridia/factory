@@ -2,6 +2,7 @@ import Axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { TaskRecord } from '../../common/types/queue';
 
 const JOBS_PATH = '/apis/batch/v1/namespaces/default/jobs';
+const WATCH_PATH = '/apis/batch/v1/watch/namespaces/default/jobs';
 
 /** Class to talk to Kubernetes. */
 export default class K8 {
@@ -25,8 +26,10 @@ export default class K8 {
       kind: 'Job',
       metadata: {
         name,
-        'factory.job': task.jobId,
-        'factory.task': task.taskId,
+        labels: {
+          'factory.job': task.jobId,
+          'factory.task': task.taskId,
+        },
       },
       spec: {
         template: {
@@ -64,6 +67,31 @@ export default class K8 {
     return this.axios.get(task.k8Link).then(resp => {
       return resp.data;
       // TODO: normalize errors.
+    });
+  }
+
+  public watchJobs(callback: (message: object) => void, endCallback: () => void) {
+    return this.axios.get(JOBS_PATH, { params: { watch: true }, responseType: 'stream' })
+    .then(resp => {
+      let buffer = Buffer.from([]);
+      resp.data.on('data', (data: any) => {
+        buffer = Buffer.concat([buffer, data]);
+        while (true) {
+          const cr = buffer.indexOf('\n');
+          if (cr < 0) {
+            break;
+          }
+          const message = JSON.parse(buffer.slice(0, cr).toString());
+          callback(message);
+          buffer = buffer.slice(cr + 1);
+        }
+      });
+      resp.data.on('end', (data: any) => {
+        // endCallback();
+      });
+      resp.data.on('close', (data: any) => {
+        endCallback();
+      });
     });
   }
 }

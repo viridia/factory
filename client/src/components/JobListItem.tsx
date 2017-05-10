@@ -39,8 +39,8 @@ class JobListItem extends React.Component<MappedProps, undefined> {
         finishedProgress = 100;
       }
     } else {
-      finishedProgress = 100 * job.workCompleted / Math.min(job.workTotal, 1);
-      failedProgress = 100 * job.workFailed / Math.min(job.workTotal, 1);
+      finishedProgress = 100 * job.workCompleted / job.workTotal;
+      failedProgress = 100 * job.workFailed / job.workTotal;
     }
     return (
       <tr

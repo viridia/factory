@@ -43,12 +43,20 @@ export default class Scheduler {
     this.r = this.jobQueue.r;
     this.db = this.r.db(process.env.DB_NAME);
     this.k8 = new K8();
+    logger.level = 'debug';
+
+    const startWatching = () => {
+      // Re-send the request if the stream ends.
+      logger.debug('Watching status changes.');
+      this.k8.watchJobs(this.handleK8Message.bind(this), startWatching);
+    };
+    startWatching();
   }
 
   public run() {
     // Job Queue processing loop.
     this.jobQueue.process((job, next, onCancel) => {
-      logger.info(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
+      logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
       const jobControl = new JobControl<JobRecord>(next);
       if (job.runState === RunState.READY) {
         this.evalRecipe(job, jobControl);
@@ -72,7 +80,7 @@ export default class Scheduler {
 
     // Task Queue processing loop.
     this.taskQueue.process((task, next, onCancel) => {
-      logger.info(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
+      logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
       const taskControl = new JobControl<TaskRecord>(next);
       if (task.runState === RunState.READY) {
         this.beginTask(task, taskControl);
@@ -351,7 +359,7 @@ export default class Scheduler {
         taskControl.reschedule(task, new Date(Date.now() + this.mediumInterval));
         this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
         this.jobQueue.findJob(task.jobId).then(jobs => {
-          const nextTime = new Date(Date.now() + this.shortInterval);
+          const nextTime = new Date(Date.now() + this.mediumInterval);
           for (const job of jobs) {
             if (job.runState === RunState.RUNNING && job.dateEnable > nextTime) {
               job.setDateEnable(nextTime);
@@ -401,11 +409,12 @@ export default class Scheduler {
             });
           });
         } else {
-          console.log('updateTaskStatus/K8 job status:', resp.status);
-          taskControl.reschedule(task, new Date(Date.now() + this.mediumInterval));
+          // console.log('updateTaskStatus/K8 job status:', resp.status);
+          taskControl.reschedule(task, new Date(Date.now() + this.longInterval));
         }
       }, error => {
-        console.log('Failed to query K8 job status:', error.response);
+        logger.info(`Task ${task.jobId}:${task.taskId} failed to query K8 status.`);
+        // logger.error('Failed to query K8 job status:', error.response);
         taskControl.reschedule(task, new Date(Date.now() + this.mediumInterval));
       });
     } else {
@@ -415,6 +424,36 @@ export default class Scheduler {
         logger.error(`Setting task ${task.jobId}:${task.taskId} status to FAILED.`);
         taskControl.cancel('no-actions.');
         this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+      });
+    }
+  }
+
+  private handleK8Message(message: any) {
+    // logger.info(`Got K8 message: ${message.type}.`);
+    if (message.type === 'MODIFIED') {
+      const jobMessage = message.object;
+      const jobId = jobMessage.metadata.labels['factory.job'];
+      const taskId = jobMessage.metadata.labels['factory.task'];
+      // logger.info(`Received update for: task ${jobId}:${taskId}.`);
+      this.taskQueue.findJob({ jobId, taskId }).then(tasks => {
+        if (tasks.length === 1) {
+          if (jobMessage.status.conditions) {
+            for (const c of jobMessage.status.conditions) {
+              if (c.type === 'Complete') {
+                logger.info(`Task ${jobId}:${taskId} signaled completed.`);
+                tasks[0].setDateEnable(new Date(Date.now() + this.shortInterval));
+                return tasks[0].update();
+              } else {
+                logger.info(`Task ${jobId}:${taskId} signaled condition:`, c);
+              }
+            }
+            // console.log(message);
+          } else {
+            logger.info(`Task ${jobId}:${taskId} status change:`, jobMessage.status);
+          }
+        } else {
+          logger.error(`Handling K8 status: task ${jobId}:${taskId} not found.`);
+        }
       });
     }
   }
