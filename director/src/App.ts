@@ -24,7 +24,8 @@ export default class App {
     const host = process.env.RETHINKDB_PROXY_SERVICE_HOST;
     const port = process.env.RETHINKDB_PROXY_SERVICE_PORT;
     this.express = express();
-    this.deepstream = deepstream(process.env.DEEPSTREAM_HOST).login();
+    this.deepstream = deepstream(
+      `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`).login();
     this.jobQueue = new Queue<JobRecord>({ host, port, db: process.env.DB_NAME }, {
       name: process.env.JOB_QUEUE_NAME,
     });
