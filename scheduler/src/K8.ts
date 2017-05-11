@@ -1,5 +1,7 @@
 import Axios, { AxiosInstance, AxiosResponse } from 'axios';
+import * as http from 'http';
 import { TaskRecord } from '../../common/types/queue';
+import { logger } from './logger';
 
 const JOBS_PATH = '/apis/batch/v1/namespaces/default/jobs';
 const WATCH_PATH = '/apis/batch/v1/watch/namespaces/default/jobs';
@@ -35,7 +37,10 @@ export default class K8 {
         template: {
           metadata: {
             name,
-            labels: { group: 'factory', component: 'worker' },
+            labels: {
+              group: 'factory',
+              component: 'worker',
+            },
           },
           spec: {
             containers: [{
@@ -70,11 +75,31 @@ export default class K8 {
     });
   }
 
+  public getPodStatus(jobId: string): Promise<any> {
+    return this.axios.get(`/api/v1/namespaces/default/pods`, {
+      params: {
+        labelSelector: `job-name=${jobId}`,
+      },
+    }).then(resp => {
+      if (resp.data.items && resp.data.items.length === 1) {
+        return resp.data.items[0];
+      }
+      return null;
+      // return Promise.reject(Error('pod not found'));
+    });
+  }
+
   public watchJobs(callback: (message: object) => void, endCallback: () => void) {
-    return this.axios.get(JOBS_PATH, { params: { watch: true }, responseType: 'stream' })
-    .then(resp => {
+    const req = http.request({
+      host: process.env.K8_HOST,
+      port: process.env.K8_PORT,
+      path: `${JOBS_PATH}?watch=true`,
+      headers: {
+        Connection: 'keep-alive',
+      },
+    }, res => {
       let buffer = Buffer.from([]);
-      resp.data.on('data', (data: any) => {
+      res.on('data', (data: any) => {
         buffer = Buffer.concat([buffer, data]);
         while (true) {
           const cr = buffer.indexOf('\n');
@@ -86,12 +111,12 @@ export default class K8 {
           buffer = buffer.slice(cr + 1);
         }
       });
-      resp.data.on('end', (data: any) => {
-        // endCallback();
-      });
-      resp.data.on('close', (data: any) => {
+      res.on('end', (data: any) => {
+        logger.debug('Watch stream ended.');
         endCallback();
       });
     });
+    req.end();
+    return req;
   }
 }

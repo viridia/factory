@@ -8,9 +8,9 @@ if [[ $# -eq 0 ]]; then
   echo "Valid commands are:"
   echo "  mount - mount the project directory into the minikube vm."
   echo "  unmount - unmount the project directory from the minikube vm."
-  echo "  build - build the development container."
-  echo "  start - start the development container."
-  echo "  stop - stop the development container."
+  # echo "  build - build the development container."
+  # echo "  start - start the development container."
+  # echo "  stop - stop the development container."
   echo "  shell - open a shell into the development container."
   echo "  db start - start the database service."
   echo "  db stop - stop the database service."
@@ -18,7 +18,6 @@ if [[ $# -eq 0 ]]; then
   echo "  ds stop - stop the deepstream.io service."
   echo "  proxy start - start the proxy to the Kubernetes control port."
   echo "  proxy stop - stop the proxy to the Kubernetes control port."
-
   exit 1
 fi
 
@@ -109,7 +108,7 @@ case $1 in
         kubectl proxy --port 8077 &
         PROXY_PID=$!
         echo $PROXY_PID > $PROXY_PID_FILE
-        sleep 0.1
+        sleep 0.2
         echo
         ;;
 

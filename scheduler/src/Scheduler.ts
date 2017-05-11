@@ -24,6 +24,8 @@ export default class Scheduler {
     this.deepstream = deepstream(
       `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`).login();
     const interval = parseInt(process.env.QUEUE_MASTER_INTERVAL, 10);
+    logger.info(`Rethinkdb service ${process.env.RETHINKDB_PROXY_SERVICE_HOST}:` +
+        `${process.env.RETHINKDB_PROXY_SERVICE_PORT}.`);
     logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.JOB_QUEUE_NAME}.`);
     this.jobQueue = new Queue<JobRecord>({
       host: process.env.RETHINKDB_PROXY_SERVICE_HOST,
@@ -102,10 +104,7 @@ export default class Scheduler {
               `Task: ${task.jobId}:${task.taskId} has failed but still has resources attached.`);
           logger.info(`Releasing task resources.`);
           this.releaseTaskResources(task).then(() => {
-            task.runState = RunState.CANCELLED;
-            task.update().then(() => {
-              taskControl.cancel('cancelled');
-            });
+            taskControl.cancel('failed');
           });
         }
       } else {
@@ -401,14 +400,34 @@ export default class Scheduler {
         if (resp.status.succeeded) {
           logger.info(`Task ${task.jobId}:${task.taskId} succeeded.`);
           this.releaseTaskResources(task).then(() => {
-            task.runState = RunState.COMPLETED;
-            task.update().then(() => {
-              taskControl.complete();
-              this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-              return this.wakeJob(task.jobId);
-            });
+            if (task.runState !== RunState.COMPLETED) {
+              task.runState = RunState.COMPLETED;
+              task.dateFinished = new Date(resp.status.completionTime);
+              task.update().then(() => {
+                taskControl.complete();
+                this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+                return this.wakeJob(task.jobId);
+              });
+            }
           });
         } else {
+          this.k8.getPodStatus(resp.metadata.name).then(pod => {
+            if (this.isPodNeverPulled(pod)) {
+              logger.error(`Task ${task.jobId}:${task.taskId} container image never pulled.`);
+              if (task.runState !== RunState.FAILED) {
+                task.runState = RunState.FAILED;
+                task.dateFinished = new Date();
+                task.update().then(() => {
+                  taskControl.cancel('failed');
+                  this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+                  return this.wakeJob(task.jobId);
+                });
+              }
+              // this.setTaskStatusChange(task, RunState.FAILED);
+              return;
+            }
+          });
+          // this.k8.getPodStatus(task.jobId, task.taskId);
           // console.log('updateTaskStatus/K8 job status:', resp.status);
           taskControl.reschedule(task, new Date(Date.now() + this.longInterval));
         }
@@ -430,32 +449,71 @@ export default class Scheduler {
 
   private handleK8Message(message: any) {
     // logger.info(`Got K8 message: ${message.type}.`);
-    if (message.type === 'MODIFIED') {
-      const jobMessage = message.object;
-      const jobId = jobMessage.metadata.labels['factory.job'];
-      const taskId = jobMessage.metadata.labels['factory.task'];
-      // logger.info(`Received update for: task ${jobId}:${taskId}.`);
-      this.taskQueue.findJob({ jobId, taskId }).then(tasks => {
-        if (tasks.length === 1) {
-          if (jobMessage.status.conditions) {
-            for (const c of jobMessage.status.conditions) {
-              if (c.type === 'Complete') {
-                logger.info(`Task ${jobId}:${taskId} signaled completed.`);
-                tasks[0].setDateEnable(new Date(Date.now() + this.shortInterval));
-                return tasks[0].update();
-              } else {
-                logger.info(`Task ${jobId}:${taskId} signaled condition:`, c);
-              }
-            }
-            // console.log(message);
-          } else {
-            logger.info(`Task ${jobId}:${taskId} status change:`, jobMessage.status);
-          }
+    const jobMessage = message.object;
+    const jobId = jobMessage.metadata.labels['factory.job'];
+    const taskId = jobMessage.metadata.labels['factory.task'];
+    this.taskQueue.findJob({ jobId, taskId }).then((tasks: TaskRecord[]) => {
+      if (tasks.length === 1) {
+        const task = tasks[0];
+        if (message.type === 'DELETED') {
+          logger.info(`Task ${jobId}:${taskId} signaled deleted.`);
+          task.dateFinished = new Date(jobMessage.status.completionTime);
+          this.setTaskStatusChange(task, RunState.COMPLETED);
+        } else if (this.isComplete(jobMessage)) {
+          logger.info(`Task ${jobId}:${taskId} signaled completed.`);
+          task.dateFinished = new Date(jobMessage.status.completionTime);
+          this.setTaskStatusChange(task, RunState.COMPLETED);
         } else {
-          logger.error(`Handling K8 status: task ${jobId}:${taskId} not found.`);
+          // logger.info(`Task ${jobId}:${taskId} status change:`, jobMessage.status);
+          this.k8.getPodStatus(jobMessage.metadata.name).then(pod => {
+            task.dateFinished = new Date();
+            if (this.isPodNeverPulled(pod)) {
+              logger.error(`Task ${jobId}:${taskId} container image never pulled.`);
+              this.setTaskStatusChange(task, RunState.FAILED);
+            }
+          });
+          // logger.verbose(JSON.stringify(jobMessage.metadata.name, null, 2));
         }
+      } else {
+        logger.warn(`Handling K8 status: task ${jobId}:${taskId} not found.`);
+      }
+    });
+  }
+
+  private setTaskStatusChange(task: TaskRecord, rs: RunState) {
+    logger.verbose(`Task ${task.jobId}:${task.taskId} state changed [${RunState[rs]}].`);
+    if (task.runState !== rs) {
+      task.runState = rs;
+      task.setDateEnable(new Date(Date.now() + this.shortInterval));
+      this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+      return task.update().then(() => {
+        return this.wakeJob(task.jobId);
       });
+    } else {
+      return Promise.resolve();
     }
+  }
+
+  private isComplete(jobMessage: any) {
+    if (jobMessage.status.conditions) {
+      for (const c of jobMessage.status.conditions) {
+        if (c.type === 'Complete') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private isPodNeverPulled(pod: any) {
+    if (pod && pod.status && pod.status.containerStatuses) {
+      for (const cs of pod.status.containerStatuses) {
+        if (cs.state.waiting && cs.state.waiting.reason === 'ErrImageNeverPull') {
+          return false;
+        }
+      }
+    }
+    return false;
   }
 
   private wakeJob(jobId: string) {
@@ -476,7 +534,7 @@ export default class Scheduler {
       return this.k8.deleteJob(task).then(resp => {
         task.k8Link = null;
       }, error => {
-        console.log('K8 cancel failed:', error.response);
+        logger.error('K8 cancel failed:', error.response);
         task.k8Link = null; // Consider it deleted anyway
       });
     }
