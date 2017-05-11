@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: k8shell
+spec:
+  restartPolicy: Never
+  containers:
+    - name: director
+      image: k8shell:0.0.1
+      imagePullPolicy: Never
+      stdin: true
+      tty: true
+      volumeMounts:
+        - mountPath: /usr/src/host
+          name: src
+  volumes:
+    - name: src
+      hostPath:
+        path: /usr/nimble/src

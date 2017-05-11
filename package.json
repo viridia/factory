@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build-image-mandlebrot": "cd images/mandlebrot && docker build --rm -f Dockerfile -t mandlebrot:0.0.1 .",
+    "build-image-k8shell": "cd images/k8shell && docker build --rm -f Dockerfile -t k8shell:0.0.1 .",
     "director": "ts-node ./director/src/index.ts",
     "start-client": "cd client && node devServer.js",
     "start-director": "RETHINKDB_PROXY_SERVICE_HOST=$(minikube ip) DEEPSTREAM_SERVICE_HOST=$(minikube ip) nodemon --exec ./node_modules/.bin/ts-node -- ./director/src/index.ts",

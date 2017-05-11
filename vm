@@ -8,9 +8,8 @@ if [[ $# -eq 0 ]]; then
   echo "Valid commands are:"
   echo "  mount - mount the project directory into the minikube vm."
   echo "  unmount - unmount the project directory from the minikube vm."
-  # echo "  build - build the development container."
-  # echo "  start - start the development container."
-  # echo "  stop - stop the development container."
+  echo "  start - start the k8shell container."
+  echo "  stop - stop the k8shell container."
   echo "  shell - open a shell into the development container."
   echo "  db start - start the database service."
   echo "  db stop - stop the database service."
@@ -26,7 +25,7 @@ case $1 in
     if [[ -e "$MOUNT_PID_FILE" ]]; then
       kill $(cat $MOUNT_PID_FILE)
     fi
-    minikube mount $BASEDIR > /dev/null &
+    minikube mount $BASEDIR:/usr/nimble/src > /dev/null &
     MOUNT_PID=$!
     echo $MOUNT_PID > $MOUNT_PID_FILE
     echo "Mount successful, process id: $MOUNT_PID."
@@ -40,29 +39,22 @@ case $1 in
     fi
     ;;
 
-  build)
-    WD=$(pwd)
-    cd $BASEDIR
-    docker build -f images/director-dev/Dockerfile --rm -t director:0.0.1 .
-    cd $WD
-    ;;
-
   start)
-    kubectl create -f "$BASEDIR/config/director-dev.yml"
+    kubectl create -f "$BASEDIR/config/k8shell.yml"
     ;;
 
   stop)
-    kubectl delete -f "$BASEDIR/config/director-dev.yml"
+    kubectl delete -f "$BASEDIR/config/k8shell.yml"
     echo "Waiting for pod to terminate..."
-    kubectl get pod director > /dev/null 2> /dev/null
+    kubectl get pod k8shell > /dev/null 2> /dev/null
     while [ $? -eq 0 ]; do
       sleep 3
-      kubectl get pod director > /dev/null 2> /dev/null
+      kubectl get pod k8shell > /dev/null 2> /dev/null
     done
     ;;
 
   shell)
-    kubectl exec -it director -- /bin/bash
+    kubectl exec -it k8shell -- /bin/bash
     ;;
 
   db)

@@ -1,6 +1,8 @@
+# A container whose purpose is to provide a development environment and a shell that runs inside
+# a Kubernetes pod.
 FROM node:7.9-alpine
 
-RUN apk add --no-cache bash sed grep coreutils
+RUN apk add --no-cache bash sed grep coreutils git
 
 ENV HOST=/usr/src/host
 ENV WORK=/usr/src/work
@@ -13,21 +15,19 @@ RUN ln -s ${HOST}/scheduler ${WORK}/scheduler
 
 WORKDIR ${WORK}
 
-ADD images/director-dev/bashrc.in /root/.bashrc
-ADD images/director-dev/inputrc.in /etc/inputrc
-ADD package.json ${WORK}/
-ADD tsconfig.json ${WORK}/
-ADD yarn.lock ${WORK}/
+ADD bashrc.in /root/.bashrc
+ADD inputrc.in /etc/inputrc
+# ADD package.json ${WORK}/
+# ADD tsconfig.json ${WORK}/
+# ADD yarn.lock ${WORK}/
 
 ARG NODE_ENV
 ENV NODE_ENV $NODE_ENV
 
 RUN cd ${WORK} && yarn
 
-EXPOSE 8087
-
+# EXPOSE 8087
 # VOLUME ["/usr/src/host"]
 
 # Wait forever
 CMD ["tail", "-f", "/dev/null"]
-# CMD ["yarn", "start"]

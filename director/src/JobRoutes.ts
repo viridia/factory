@@ -56,7 +56,7 @@ export default class JobRoutes {
 
   private patchJob(req: Request, res: Response, next: NextFunction): void {
     const jcr = req.body as JobChangeRequest;
-    console.info('patchJob:', req.params.id, jcr);
+    // console.info('patchJob:', req.params.id, jcr);
     this.jobQueue.getJob(req.params.id).then(jobs => {
       if (jobs.length === 0) {
         res.status(404).json({ error: 'not-found' });
@@ -187,13 +187,15 @@ export default class JobRoutes {
 
   private cancelJob(job: JobRecord, res: Response) {
     if (job.runState === RunState.RUNNING || job.runState === RunState.READY) {
+      logger.info(`Cancelling job ${job.id}, state [${RunState[job.runState]}], status:`,
+          job.status);
       job.runState = RunState.CANCELLING;
       job.setDateEnable(new Date());
       job.update().then(() => {
         this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
       });
     } else {
-      logger.error(`Attempted to cancel job ${job.id} that was not running`, job.status);
+      logger.error(`Attempted to cancel job ${job.id} that was not running, status:`, job.status);
       res.status(400).json({ error: 'not-running' });
     }
   }

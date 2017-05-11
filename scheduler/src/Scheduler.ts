@@ -59,6 +59,7 @@ export default class Scheduler {
     // Job Queue processing loop.
     this.jobQueue.process((job, next, onCancel) => {
       const jobControl = new JobControl<JobRecord>(next);
+      logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
       if (job.runState === RunState.READY) {
         this.evalRecipe(job, jobControl);
       } else if (job.runState === RunState.CANCELLING) {
@@ -66,7 +67,6 @@ export default class Scheduler {
       } else if (job.runState === RunState.RUNNING) {
         this.updateJobStatus(job, jobControl);
       } else if (job.runState === RunState.CANCELLED) {
-        logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
         // Should already have been cancelled
         jobControl.cancel('cancelled');
       } else if (job.runState === RunState.FAILED) {

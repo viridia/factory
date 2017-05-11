@@ -19,6 +19,8 @@ export default class ConfigRoutes {
   }
 
   private getConfig(req: Request, res: Response, next: NextFunction): void {
-    res.json({ hosts: { deepstream: process.env.DEEPSTREAM_HOST } });
+    res.json({ hosts: {
+      deepstream: `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`,
+    } });
   }
 }
