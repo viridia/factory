@@ -16,7 +16,7 @@ export default class Scheduler {
   private deepstream: deepstreamIO.Client;
   private k8: K8;
 
-  private shortInterval: number = 100; // 10ms
+  private shortInterval: number = 100; // 100ms
   private mediumInterval: number = 3000; // 3 seconds
   private longInterval: number = 1000 * 60 * 60; // One hour
 
@@ -24,7 +24,7 @@ export default class Scheduler {
     this.deepstream = deepstream(
       `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`).login();
     const interval = parseInt(process.env.QUEUE_MASTER_INTERVAL, 10);
-    logger.info(`Rethinkdb service ${process.env.RETHINKDB_PROXY_SERVICE_HOST}:` +
+    logger.info(`Rethinkdb service host: ${process.env.RETHINKDB_PROXY_SERVICE_HOST}:` +
         `${process.env.RETHINKDB_PROXY_SERVICE_PORT}.`);
     logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.JOB_QUEUE_NAME}.`);
     this.jobQueue = new Queue<JobRecord>({
@@ -58,7 +58,6 @@ export default class Scheduler {
   public run() {
     // Job Queue processing loop.
     this.jobQueue.process((job, next, onCancel) => {
-      logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
       const jobControl = new JobControl<JobRecord>(next);
       if (job.runState === RunState.READY) {
         this.evalRecipe(job, jobControl);
@@ -67,9 +66,11 @@ export default class Scheduler {
       } else if (job.runState === RunState.RUNNING) {
         this.updateJobStatus(job, jobControl);
       } else if (job.runState === RunState.CANCELLED) {
+        logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
         // Should already have been cancelled
         jobControl.cancel('cancelled');
       } else if (job.runState === RunState.FAILED) {
+        logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
         // Should already have been cancelled
         jobControl.cancel('failed');
       }
@@ -82,11 +83,11 @@ export default class Scheduler {
 
     // Task Queue processing loop.
     this.taskQueue.process((task, next, onCancel) => {
-      logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
       const taskControl = new JobControl<TaskRecord>(next);
       if (task.runState === RunState.READY) {
         this.beginTask(task, taskControl);
       } else if (task.runState === RunState.CANCELLING) {
+        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
         this.releaseTaskResources(task).then(() => {
           task.runState = RunState.CANCELLED;
           task.update().then(() => {
@@ -94,8 +95,10 @@ export default class Scheduler {
           });
         });
       } else if (task.runState === RunState.RUNNING) {
+        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
         this.updateTaskStatus(task, taskControl);
       } else if (task.runState === RunState.FAILED) {
+        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
         if (task.k8Link === null) {
           logger.info(`Removing task: ${task.jobId}:${task.taskId} from queue.`);
           taskControl.cancel('failed');
@@ -107,6 +110,9 @@ export default class Scheduler {
             taskControl.cancel('failed');
           });
         }
+      } else if (task.runState === RunState.COMPLETED) {
+        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
+        taskControl.complete();
       } else {
         // TODO: change this.
         next(null, task);
@@ -201,7 +207,6 @@ export default class Scheduler {
   }
 
   private updateJobStatus(job: JobRecord, jobControl: JobControl<JobRecord>) {
-    console.log('updating job status');
     const later = new Date(Date.now() + this.longInterval);
     const soon = new Date(Date.now() + this.shortInterval); // 100 ms
     let workTotal = 0;
@@ -304,7 +309,7 @@ export default class Scheduler {
         if (job.waitingTasks.length === 0 || job.runningTasks.length === 0) {
           logger.warn(`Job ${job.id} has ${failedTasks.length} failing tasks`,
               'and no running tasks.');
-          logger.error(`Setting job ${job.id} state to FAILED.`);
+          logger.error(`Setting job ${job.id} state to [FAILED].`);
           job.runState = RunState.FAILED;
           job.update().then(() => {
             jobControl.cancel('cancelled');
@@ -440,9 +445,10 @@ export default class Scheduler {
       logger.warn(`Task ${task.jobId}:${task.taskId} is running but has no action specified.`);
       task.runState = RunState.FAILED;
       task.update().then(() => {
-        logger.error(`Setting task ${task.jobId}:${task.taskId} status to FAILED.`);
+        logger.error(`Setting task ${task.jobId}:${task.taskId} status to [FAILED].`);
         taskControl.cancel('no-actions.');
         this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+        return this.wakeJob(task.jobId);
       });
     }
   }
@@ -455,32 +461,43 @@ export default class Scheduler {
     this.taskQueue.findJob({ jobId, taskId }).then((tasks: TaskRecord[]) => {
       if (tasks.length === 1) {
         const task = tasks[0];
+        if (task.runState === RunState.FAILED ||
+            task.runState === RunState.CANCELLED ||
+            task.runState === RunState.COMPLETED) {
+          return;
+        }
         if (message.type === 'DELETED') {
-          logger.info(`Task ${jobId}:${taskId} signaled deleted.`);
+          // Task was deleted, may have been successful or not.
+          logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] signaled deleted.`);
           task.dateFinished = new Date(jobMessage.status.completionTime);
-          this.setTaskStatusChange(task, RunState.COMPLETED);
+          this.setTaskRunState(task,
+              task.runState === RunState.CANCELLING ? RunState.CANCELLED : RunState.COMPLETED);
         } else if (this.isComplete(jobMessage)) {
-          logger.info(`Task ${jobId}:${taskId} signaled completed.`);
+          // Task completed successfully
+          logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] signaled completed.`);
           task.dateFinished = new Date(jobMessage.status.completionTime);
-          this.setTaskStatusChange(task, RunState.COMPLETED);
+          this.setTaskRunState(task, RunState.COMPLETED);
         } else {
-          // logger.info(`Task ${jobId}:${taskId} status change:`, jobMessage.status);
           this.k8.getPodStatus(jobMessage.metadata.name).then(pod => {
             task.dateFinished = new Date();
             if (this.isPodNeverPulled(pod)) {
               logger.error(`Task ${jobId}:${taskId} container image never pulled.`);
-              this.setTaskStatusChange(task, RunState.FAILED);
+              this.setTaskRunState(task, RunState.FAILED);
+            } else if (jobMessage.status) {
+              // What is it trying to tell us?
+              // logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] status change:`)
+              // console.info(jobMessage);
             }
           });
           // logger.verbose(JSON.stringify(jobMessage.metadata.name, null, 2));
         }
-      } else {
+      } else if (message.type !== 'DELETED') {
         logger.warn(`Handling K8 status: task ${jobId}:${taskId} not found.`);
       }
     });
   }
 
-  private setTaskStatusChange(task: TaskRecord, rs: RunState) {
+  private setTaskRunState(task: TaskRecord, rs: RunState) {
     logger.verbose(`Task ${task.jobId}:${task.taskId} state changed [${RunState[rs]}].`);
     if (task.runState !== rs) {
       task.runState = rs;
@@ -509,7 +526,7 @@ export default class Scheduler {
     if (pod && pod.status && pod.status.containerStatuses) {
       for (const cs of pod.status.containerStatuses) {
         if (cs.state.waiting && cs.state.waiting.reason === 'ErrImageNeverPull') {
-          return false;
+          return true;
         }
       }
     }

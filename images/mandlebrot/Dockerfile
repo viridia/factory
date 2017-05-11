@@ -1,6 +1,6 @@
-FROM node:7.9-alpine
+FROM golang
 
-RUN apk add --no-cache bash sed grep coreutils
+RUN apt-get update && apt-get install bc
 
 # Create the directory for the worker scripts
 ENV WORK=/usr/nimble/factory
@@ -12,8 +12,11 @@ ENV SANDBOX=/usr/nimble/sandbox
 RUN mkdir -p ${SANDBOX}
 
 # Copy in the scripts we need.
-ADD hello.sh ${WORK}/
-RUN chmod a+x hello.sh
+ADD mandelbrot.go ${WORK}/
+run go build mandelbrot.go
+
+ADD start.sh ${WORK}/
+run chmod a+x start.sh
 
 # Run the command
-ENTRYPOINT ["./hello.sh"]
+ENTRYPOINT ["./start.sh"]
