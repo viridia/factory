@@ -99,6 +99,10 @@
             "description": "Template for the name of a tool to run for this rendering step. Mutually exclusive with 'image'.",
             "type": "string"
           },
+          "workdir": {
+            "description": "Working directory for the application.",
+            "type": "string"
+          },
           "args": {
             "description": "List of arguments to pass to the application.",
             "type": "array",

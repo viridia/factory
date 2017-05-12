@@ -6,18 +6,28 @@ import { Dispatch } from 'redux';
 import { cancelJob, deleteJob } from '../store/jobsReducer';
 import { JobQueryResult } from '../store/types/JobQueryResult';
 import './JobControlForm.scss';
+import { LogsViewer } from './LogsViewer';
 
 interface JobControlFormProps {
   jobs: JobQueryResult;
   dispatch: Dispatch<{}>;
 }
 
+interface State {
+  showLogs: boolean;
+}
+
 /** Displays details of the selected job. */
-class JobControlForm extends React.Component<JobControlFormProps, undefined> {
+class JobControlForm extends React.Component<JobControlFormProps, State> {
   constructor() {
     super();
     this.onClickCancel = this.onClickCancel.bind(this);
     this.onClickDelete = this.onClickDelete.bind(this);
+    this.onClickViewLogs = this.onClickViewLogs.bind(this);
+    this.onCloseLogsViewer = this.onCloseLogsViewer.bind(this);
+    this.state = {
+      showLogs: false,
+    };
   }
 
   public render() {
@@ -26,18 +36,26 @@ class JobControlForm extends React.Component<JobControlFormProps, undefined> {
     if (!job) {
       return null;
     }
-    const canCancel = job.state === RunState.WAITING
+    const showCancel = job.state === RunState.WAITING
         || job.state === RunState.READY
-        || job.state === RunState.RUNNING;
+        || job.state === RunState.RUNNING
+        || job.state === RunState.CANCELLING;
     const canDelete = job.state === RunState.CANCELLED
         || job.state === RunState.COMPLETED
         || job.state === RunState.FAILED;
     return (
       <section className="job-control-form">
-        {canCancel && <Button bsStyle="danger" onClick={this.onClickCancel}>Cancel</Button>}
+        {showCancel && <Button
+            bsStyle="danger"
+            disabled={job.state === RunState.CANCELLING}
+            onClick={this.onClickCancel}
+        >
+          Cancel
+        </Button>}
         {canDelete && <Button bsStyle="danger" onClick={this.onClickDelete}>Remove</Button>}
         <span className="flex" />
-        <Button bsStyle="default">View Logs</Button>
+        <Button bsStyle="default" onClick={this.onClickViewLogs}>View Logs</Button>
+        <LogsViewer open={this.state.showLogs} onHide={this.onCloseLogsViewer}/>
       </section>
     );
   }
@@ -52,6 +70,17 @@ class JobControlForm extends React.Component<JobControlFormProps, undefined> {
     e.preventDefault();
     const { jobs } = this.props;
     this.props.dispatch(deleteJob(jobs.selected));
+  }
+
+  private onClickViewLogs(e: any) {
+    e.preventDefault();
+    // const { jobs } = this.props;
+    this.setState({ showLogs: true });
+    // this.props.dispatch(deleteJob(jobs.selected));
+  }
+
+  private onCloseLogsViewer() {
+    this.setState({ showLogs: false });
   }
 }
 

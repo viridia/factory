@@ -15,6 +15,7 @@ export class TaskRecord extends Queue.Job {
       endedAt: record.dateFinished,
       outputs: record.outputs,
       image: record.image,
+      workdir: record.workdir,
       args: record.args,
     };
   }
@@ -27,6 +28,7 @@ export class TaskRecord extends Queue.Job {
   public depends: string[];
   public dependents: string[];
   public image: string;
+  public workdir?: string;
   public args: string[];
   public inputs: string[];
   // public inputFilters: object[];

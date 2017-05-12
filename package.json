@@ -6,7 +6,7 @@
   "author": "Talin <viridia@gmail.com>",
   "license": "UNLICENSED",
   "scripts": {
-    "build-image-mandlebrot": "cd images/mandlebrot && docker build --rm -f Dockerfile -t mandlebrot:0.0.1 .",
+    "build-image-mandelbrot": "cd images/mandelbrot && docker build --rm -f Dockerfile -t mandelbrot:0.0.1 .",
     "build-image-k8shell": "cd images/k8shell && docker build --rm -f Dockerfile -t k8shell:0.0.1 .",
     "director": "ts-node ./director/src/index.ts",
     "start-client": "cd client && node devServer.js",
@@ -33,6 +33,7 @@
     "ajv": "^5.0.1",
     "axios": "^0.16.1",
     "body-parser": "^1.17.1",
+    "certainty": "1.3.3",
     "dateformat": "^2.0.0",
     "deepstream.io-client-js": "^2.1.4",
     "dotenv": "^4.0.0",

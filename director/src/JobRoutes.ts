@@ -31,6 +31,9 @@ export default class JobRoutes {
     this.k8Api = Axios.create({
       baseURL: `http://${process.env.K8_HOST}:${process.env.K8_PORT}`,
     });
+    this.jobQueue.on('log', (queueId: string, jobId: string) => {
+      console.log('Log event added to:', queueId, jobId);
+    });
   }
 
   /** Add this router to the parent router. */

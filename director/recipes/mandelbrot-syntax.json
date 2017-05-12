@@ -1,6 +1,6 @@
 {
   "type": "Job",
-  "title": "Mandlebrot (Fail No Image)",
+  "title": "Mandlebrot (Syntax error)",
   "description": "Recipe to compute images of the Mandlebrot set.",
   "params": [
     {
@@ -12,12 +12,12 @@
   ],
   "steps": [
     {
-      "id": "render.{{i}}",
+      "id": "render.{{nonexistent}}",
       "title": "render",
-      "image": "mandlebrot:0.0.1",
+      "image": "mandelbrot:0.0.1",
       "args": [
         "Nimble",
-        "{{i}}"
+        "{{nonexistent}}"
       ],
       "multiplicity": {
         "i": "{{frames}}"
@@ -29,7 +29,7 @@
     {
       "id": "shoot",
       "title": "shoot movie",
-      "image": "bad-image:v1",
+      "image": "ffmpeg:v1",
       "depends": [
         {
           "$foreach": ["n", "{{frames}}", "render.{{n}}"]

@@ -5,7 +5,7 @@ metadata:
 spec:
   restartPolicy: Never
   containers:
-    - name: director
+    - name: k8shell
       image: k8shell:0.0.1
       imagePullPolicy: Never
       stdin: true
@@ -13,7 +13,13 @@ spec:
       volumeMounts:
         - mountPath: /usr/src/host
           name: src
+      volumeMounts:
+        - mountPath: /usr/nimble/sandbox
+          name: sandbox
   volumes:
     - name: src
       hostPath:
         path: /usr/nimble/src
+    - name: sandbox
+      hostPath:
+        path: /usr/nimble/sandbox

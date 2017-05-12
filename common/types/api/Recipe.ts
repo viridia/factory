@@ -32,6 +32,7 @@ export interface Step {
   depends?: Array<string | Expr>;
   image?: string | Expr;
   tool?: string | Expr;
+  workdir?: string | Expr;
   args?: Array<string | Expr>;
   env?: StrMap<string | Expr>;
   multiplicity?: StrMap<Expr>;

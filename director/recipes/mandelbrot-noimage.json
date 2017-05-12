@@ -1,6 +1,6 @@
 {
   "type": "Job",
-  "title": "Mandlebrot",
+  "title": "Mandlebrot (Fail No Image)",
   "description": "Recipe to compute images of the Mandlebrot set.",
   "params": [
     {
@@ -14,21 +14,22 @@
     {
       "id": "render.{{i}}",
       "title": "render",
-      "image": "mandlebrot:0.0.1",
+      "image": "mandelbrot:0.0.1",
       "args": [
+        "Nimble",
         "{{i}}"
       ],
       "multiplicity": {
         "i": "{{frames}}"
       },
       "outputs": [
-        "/usr/nimble/sandbox/image.{{i:03}}.jpg"
+        "/images/image.{{i}}.jpg"
       ]
     },
     {
       "id": "shoot",
       "title": "shoot movie",
-      "image": "opencoconut/ffmpeg",
+      "image": "bad-image:v1",
       "depends": [
         {
           "$foreach": ["n", "{{frames}}", "render.{{n}}"]

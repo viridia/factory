@@ -65,11 +65,13 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
           </tr>
           <tr>
             <th>Tasks Completed</th>
-            <td>{job.tasksCompleted} / {job.tasksTotal} (work {job.workCompleted} / {job.workTotal})</td>
+            <td>{job.tasksCompleted} / {job.tasksTotal} (
+                work {job.workCompleted} / {job.workTotal})</td>
           </tr>
           <tr>
             <th>Tasks Failed</th>
-            <td>{job.tasksFailed} / {job.tasksTotal} (work {job.workFailed} / {job.workTotal})</td>
+            <td>{job.tasksFailed} / {job.tasksTotal} (
+                work {job.workFailed} / {job.workTotal})</td>
           </tr>
         </tbody>
       </table>

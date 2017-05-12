@@ -1,0 +1,36 @@
+.logs-viewer.modal-dialog {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  height: 90%;
+  margin: 40px;
+  flex: 1;
+
+  > .modal-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+
+    .sr-only {
+      display: none;
+    }
+
+    > .modal-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 4px;
+
+      > .log-entries {
+        flex: 1;
+        background-color: #244;
+        overflow-y: auto;
+        padding: 4px;
+        color: #cf8;
+        font-family: monospace;
+        font-size: 14px;
+      }
+    }
+  }
+}

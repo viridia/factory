@@ -1,6 +1,6 @@
 {
   "type": "Job",
-  "title": "Mandlebrot (Syntax error)",
+  "title": "Mandlebrot",
   "description": "Recipe to compute images of the Mandlebrot set.",
   "params": [
     {
@@ -12,34 +12,38 @@
   ],
   "steps": [
     {
-      "id": "render.{{nonexistent}}",
+      "id": "render.{{i}}",
       "title": "render",
-      "image": "mandlebrot:0.0.1",
+      "image": "mandelbrot:0.0.1",
+      "workdir": "/usr/nimble/sandbox",
       "args": [
-        "Nimble",
-        "{{nonexistent}}"
+        "{{i}}"
       ],
       "multiplicity": {
         "i": "{{frames}}"
       },
       "outputs": [
-        "/images/image.{{i}}.jpg"
+        "/usr/nimble/sandbox/image.{{i:03}}.jpg"
       ]
     },
     {
       "id": "shoot",
       "title": "shoot movie",
-      "image": "ffmpeg:v1",
+      "image": "opencoconut/ffmpeg",
       "depends": [
         {
           "$foreach": ["n", "{{frames}}", "render.{{n}}"]
         }
       ],
+      "workdir": "/usr/nimble/sandbox",
       "args": [
+        {
+          "$foreach": ["n", "{{frames}}", "image.{{n:03}}.jpg"]
+        }
       ],
       "inputs": [
         {
-          "$foreach": ["n", "{{frames}}", "/images/image.{{n}}.jpg"]
+          "$foreach": ["n", "{{frames}}", "/usr/nimble/sandbox/image.{{n:03}}.jpg"]
         }
       ],
       "outputs": [

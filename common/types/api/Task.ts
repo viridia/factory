@@ -31,6 +31,9 @@ export interface Task {
   /** Image that was run. */
   image?: string;
 
+  /** Working directory for the task. */
+  workdir?: string;
+
   /** Arguments to that image. */
   args: string[];
 }

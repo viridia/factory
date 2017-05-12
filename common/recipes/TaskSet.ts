@@ -87,6 +87,15 @@ export default class TaskSet {
     if (step.image) {
       task.image = this.evaluator.eval(step.image, env, 'string');
     }
+    if (step.tool) {
+      task.tool = this.evaluator.eval(step.tool, env, 'string');
+    }
+    if (step.workdir) {
+      task.workdir = this.evaluator.eval(step.workdir, env, 'string');
+    }
+    if (step.image) {
+      task.image = this.evaluator.eval(step.image, env, 'string');
+    }
     if (step.args) {
       task.args = this.evaluator.evalArray(step.args, env, 'string');
     }
@@ -133,7 +142,8 @@ export default class TaskSet {
           throw Error(`Task "${task.taskId}" cannot depend on subsequent task "${dep}".`);
         }
         if (prior.step === task.step) {
-          throw Error(`Task "${task.taskId}" cannot depend on task "${dep}" which is in the same step.`);
+          throw Error(
+              `Task "${task.taskId}" cannot depend on task "${dep}" which is in the same step.`);
         }
         prior.dependents.push(task.taskId);
       }

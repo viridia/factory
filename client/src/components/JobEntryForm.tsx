@@ -27,7 +27,7 @@ class JobEntryForm extends React.Component<MappedProps, State> {
     super();
     this.state = {
       inputFile: 'dummy.txt',
-      recipe: 'mandlebrot',
+      recipe: 'mandelbrot',
     };
     this.onChangeRecipe = this.onChangeRecipe.bind(this);
     this.onChangeInputFile = this.onChangeInputFile.bind(this);

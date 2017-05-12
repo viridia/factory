@@ -31,6 +31,12 @@
       &.failed .state > .pill {
         background-color: #faa;
       }
+      &.cancelling .state > .pill {
+        background-color: #fea;
+      }
+      &.cancelled .state > .pill {
+        background-color: #fda;
+      }
     }
     td, th {
       text-align: center;

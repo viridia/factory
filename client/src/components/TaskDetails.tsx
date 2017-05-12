@@ -47,6 +47,10 @@ class TaskDetails extends React.Component<TaskDetailsProps, undefined> {
             <th>Image</th>
             <td>{task.image}</td>
           </tr>}
+          {task.workdir && <tr>
+            <th>Working Dir</th>
+            <td>{task.workdir}</td>
+          </tr>}
           <tr>
             <th>Args</th>
             <td>{task.args.map(arg => <span>{arg} </span>)}</td>

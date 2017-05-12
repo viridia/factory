@@ -7,6 +7,8 @@ export default class TaskData {
   public depends: string[];
   public dependents: string[];
   public image?: string;
+  public tool?: string;
+  public workdir?: string;
   public args: string[];
   public env: { [name: string]: string };
   public inputs: string[];
@@ -21,6 +23,8 @@ export default class TaskData {
     this.depends = [];
     this.dependents = [];
     this.image = null;
+    this.tool = null;
+    this.workdir = null;
     this.args = [];
     this.env = {};
     this.inputs = [];
