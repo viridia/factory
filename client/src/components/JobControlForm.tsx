@@ -1,15 +1,19 @@
 import { Job, RunState } from 'common/types/api';
+import { LogEntry } from 'common/types/api/LogEntry';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
+import { fetchJobLogs } from '../store/jobLogsReducer';
 import { cancelJob, deleteJob } from '../store/jobsReducer';
 import { JobQueryResult } from '../store/types/JobQueryResult';
+import { LogsQueryResult } from '../store/types/LogsQueryResult';
 import './JobControlForm.scss';
 import { LogsViewer } from './LogsViewer';
 
 interface JobControlFormProps {
   jobs: JobQueryResult;
+  jobLogs: LogsQueryResult;
   dispatch: Dispatch<{}>;
 }
 
@@ -55,7 +59,11 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
         {canDelete && <Button bsStyle="danger" onClick={this.onClickDelete}>Remove</Button>}
         <span className="flex" />
         <Button bsStyle="default" onClick={this.onClickViewLogs}>View Logs</Button>
-        <LogsViewer open={this.state.showLogs} onHide={this.onCloseLogsViewer}/>
+        <LogsViewer
+            open={this.state.showLogs}
+            onHide={this.onCloseLogsViewer}
+            logs={this.props.jobLogs}
+        />
       </section>
     );
   }
@@ -73,9 +81,10 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
   }
 
   private onClickViewLogs(e: any) {
+    const { jobs } = this.props;
     e.preventDefault();
-    // const { jobs } = this.props;
     this.setState({ showLogs: true });
+    this.props.dispatch(fetchJobLogs(jobs.selected));
     // this.props.dispatch(deleteJob(jobs.selected));
   }
 
@@ -85,5 +94,8 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
 }
 
 export default connect(
-  state => ({ jobs: state.jobs }),
+  state => ({
+    jobs: state.jobs,
+    jobLogs: state.jobLogs,
+  }),
 )(JobControlForm);

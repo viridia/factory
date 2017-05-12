@@ -48,6 +48,7 @@ export default class JobRoutes {
     this.router.get('/:id', this.getJob.bind(this));
     this.router.patch('/:id', this.patchJob.bind(this));
     this.router.delete('/:id', this.deleteJob.bind(this));
+    this.router.get('/:id/logs', this.getJobLogs.bind(this));
     this.router.get('/', this.queryJobs.bind(this));
     this.router.post('/', this.createJob.bind(this));
     // this.router.get('/:id/logs', this.getJobLogs.bind(this));
@@ -181,7 +182,24 @@ export default class JobRoutes {
   }
 
   private getTask(req: Request, res: Response, next: NextFunction): void {
-    // res.json({ message: `requesting task ${req.params.id}.` });
+    res.json([]);
+  }
+
+  private getJobLogs(req: Request, res: Response, next: NextFunction): void {
+    this.taskQueue.getJob(req.params.id).then(jobs => {
+      if (jobs.length === 1) {
+        res.json(jobs[0].log.map(l => ({
+          date: l.date,
+          message: l.message,
+          type: l.type,
+        })));
+      } else {
+        res.json([]);
+      }
+    }, error => {
+      res.status(500).json({ error: 'internal', message: error.message });
+      logger.error(`Error getting job logs:`, error);
+    });
   }
 
   private getTaskLogs(req: Request, res: Response, next: NextFunction): void {

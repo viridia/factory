@@ -1,10 +1,13 @@
+import * as classNames from 'classnames';
 import * as React from 'react';
 import { Button, Modal } from 'react-bootstrap';
+import { LogsQueryResult } from '../store/types/LogsQueryResult';
 import './LogsViewer.scss';
 
 interface Props {
   open: boolean;
   onHide: () => void;
+  logs: LogsQueryResult;
 }
 
 interface State {
@@ -12,8 +15,8 @@ interface State {
 }
 
 export class LogsViewer extends React.Component<Props, State> {
-  constructor() {
-    super();
+  constructor(props: Props) {
+    super(props);
     this.onExited = this.onExited.bind(this);
     this.state = {
       show: false,
@@ -40,7 +43,9 @@ export class LogsViewer extends React.Component<Props, State> {
         </Modal.Header>
         <Modal.Body>
           <section className="log-entries">
-            Logs
+            {this.props.logs.entries.map(l => (<div className={classNames('entry', l.type)}>
+              {l.message}
+            </div>))}
           </section>
         </Modal.Body>
         <Modal.Footer>
