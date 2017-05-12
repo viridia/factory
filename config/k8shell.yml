@@ -11,7 +11,7 @@ spec:
       stdin: true
       tty: true
       volumeMounts:
-        - mountPath: /usr/src/host
+        - mountPath: /usr/nimble/src
           name: src
       volumeMounts:
         - mountPath: /usr/nimble/sandbox
