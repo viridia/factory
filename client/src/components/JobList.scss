@@ -28,7 +28,7 @@
       &.running .state > .pill {
         background-color: #7c7;
       }
-      &.failed .state > .pill {
+      &.failed .state > .pill, &.failing .state > .pill  {
         background-color: #faa;
       }
       &.cancelling .state > .pill {

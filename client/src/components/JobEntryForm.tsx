@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Button, FormControl } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
-import { createJob } from '../store/createJobStatusReducer';
+import { create } from '../store/createJobStatusReducer';
 import { CreateJobStatus } from '../store/types/CreateJobStatus';
 import './JobEntryForm.scss';
 
@@ -79,7 +79,7 @@ class JobEntryForm extends React.Component<MappedProps, State> {
   private onSubmitJob(e: any) {
     e.preventDefault();
     const { dispatch } = this.props;
-    dispatch(createJob({
+    dispatch(create({
       user: 10,
       username: 'talin',
       project: 11,

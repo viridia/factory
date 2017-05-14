@@ -22,7 +22,7 @@ export default class K8 {
     });
   }
 
-  public createJob(task: TaskRecord) {
+  public create(task: TaskRecord) {
     const name = `factory-${task.taskId}-${task.jobId}`;
     return this.axios.post(JOBS_PATH, {
       kind: 'Job',

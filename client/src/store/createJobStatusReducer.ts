@@ -1,5 +1,5 @@
+import { JobRequest } from 'api';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { JobRequest } from 'common/types/api';
 import { Dispatch } from 'redux';
 import { Action, handleAction, handleActions } from 'redux-actions';
 import {
@@ -8,9 +8,9 @@ import {
   CREATE_JOB_REQUESTED,
 } from './actionIds';
 import {
-  createJobFailed,
-  createJobOK,
-  createJobRequested,
+  creatFailed,
+  creatOK,
+  creatRequested,
 } from './actions';
 import { CreateJobStatus } from './types/CreateJobStatus';
 
@@ -21,28 +21,28 @@ const initialState: CreateJobStatus = {
 };
 
 // Async action which creates a new job.
-export function createJob(request: JobRequest) {
+export function create(request: JobRequest) {
   return (dispatch: Dispatch<{}>, getState: () => {}) => {
-    dispatch(createJobRequested());
+    dispatch(creatRequested());
     return axios.post('/api/v1/jobs', request)
     .then((resp: AxiosResponse) => {
       // Update the store.
-      dispatch(createJobOK(resp.data));
+      dispatch(creatOK(resp.data));
     }, (error: AxiosError) => {
       // Signal an error.
       if (error.response) {
         console.error('create job failed:', error.response.data);
-        dispatch(createJobFailed(error.response.statusText));
+        dispatch(creatFailed(error.response.statusText));
       } else {
         console.error('create job failed:', error);
-        dispatch(createJobFailed(error.message));
+        dispatch(creatFailed(error.message));
       }
     });
   };
 }
 
 /** Action handlers. */
-const createJobReducer = handleActions<CreateJobStatus>({
+const creatReducer = handleActions<CreateJobStatus>({
   [CREATE_JOB_REQUESTED]: (state: CreateJobStatus) => ({ ...state, busy: true }),
   [CREATE_JOB_OK]: (state: CreateJobStatus) => ({ error: null, busy: false }),
   [CREATE_JOB_FAILED]: (state: CreateJobStatus, action: Action<string>) => {
@@ -50,4 +50,4 @@ const createJobReducer = handleActions<CreateJobStatus>({
   },
 }, initialState);
 
-export default createJobReducer;
+export default creatReducer;

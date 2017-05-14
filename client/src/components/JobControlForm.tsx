@@ -1,5 +1,4 @@
-import { Job, RunState } from 'common/types/api';
-import { LogEntry } from 'common/types/api/LogEntry';
+import { Job, LogEntry, RunState } from 'api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import { connect } from 'react-redux';
@@ -43,7 +42,8 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
     const showCancel = job.state === RunState.WAITING
         || job.state === RunState.READY
         || job.state === RunState.RUNNING
-        || job.state === RunState.CANCELLING;
+        || job.state === RunState.CANCELLING
+        || job.state === RunState.FAILING;
     const canDelete = job.state === RunState.CANCELLED
         || job.state === RunState.COMPLETED
         || job.state === RunState.FAILED;
@@ -51,7 +51,7 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
       <section className="job-control-form">
         {showCancel && <Button
             bsStyle="danger"
-            disabled={job.state === RunState.CANCELLING}
+            disabled={job.state === RunState.CANCELLING || job.state === RunState.FAILING}
             onClick={this.onClickCancel}
         >
           Cancel

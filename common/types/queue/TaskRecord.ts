@@ -1,8 +1,8 @@
-import * as Queue from 'rethinkdb-job-queue';
+import { Job } from '../../../queue';
 import { RunState, Task } from '../api';
 
 /** Data structure of a Job as it is stored in the database. */
-export class TaskRecord extends Queue.Job {
+export class TaskRecord implements Job {
   public static serialize(record: TaskRecord): Task {
     return {
       id: record.taskId,
@@ -10,9 +10,9 @@ export class TaskRecord extends Queue.Job {
       step: record.step,
       index: record.index,
       depends: record.depends,
-      state: record.runState,
+      state: record.state,
       startedAt: record.startedAt,
-      endedAt: record.dateFinished,
+      endedAt: record.endedAt,
       outputs: record.outputs,
       image: record.image,
       workdir: record.workdir,
@@ -20,6 +20,14 @@ export class TaskRecord extends Queue.Job {
     };
   }
 
+  // from queue.Job
+  public id: string;
+  public state: RunState;
+  public when: Date;
+  public startedAt?: Date;
+  public endedAt?: Date;
+
+  // New fields
   public taskId: string;
   public jobId: string;
   public title: string;
@@ -35,7 +43,6 @@ export class TaskRecord extends Queue.Job {
   public outputs: string[];
   // public outputFilters: object[];
   public weight: number;
-  public runState: RunState;
-  public startedAt?: Date;
   public k8Link?: string; // Link to Kubernetes Job
+  public workStarted: boolean;
 }

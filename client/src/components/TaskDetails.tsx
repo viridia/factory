@@ -1,4 +1,4 @@
-import { RunState, Task } from 'common/types/api';
+import { RunState, Task } from 'api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { connect } from 'react-redux';

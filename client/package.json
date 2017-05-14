@@ -6,7 +6,7 @@
   "author": "Talin <viridia@gmail.com>",
   "license": "UNLICENSED",
   "scripts": {
-    "postinstall": "ln -s $(pwd)/../common src/common",
+    "postinstall": "ln -s $(pwd)/../common/types/api src/api",
     "start": "node devServer.js"
   },
   "devDependencies": {

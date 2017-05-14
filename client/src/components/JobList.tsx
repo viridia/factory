@@ -1,4 +1,4 @@
-import { Job } from 'common/types/api';
+import { Job } from 'api';
 import * as Immutable from 'immutable';
 import * as React from 'react';
 import { connect } from 'react-redux';

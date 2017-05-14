@@ -1,5 +1,4 @@
-import { RunState, Task } from 'common/types/api';
-import { LogEntry } from 'common/types/api/LogEntry';
+import { LogEntry, RunState, Task } from 'api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import { connect } from 'react-redux';

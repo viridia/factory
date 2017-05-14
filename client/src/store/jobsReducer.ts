@@ -1,5 +1,5 @@
+import { Job, JobQuery, JobRequest } from 'api';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { Job, JobQuery, JobRequest } from 'common/types/api';
 import * as Immutable from 'immutable';
 import { Dispatch } from 'redux';
 import { Action, handleActions } from 'redux-actions';

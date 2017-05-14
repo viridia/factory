@@ -1,7 +1,7 @@
 import { RunState } from '../../common/types/api';
 import { Job } from './Job';
 import { Logger } from './Logger';
-import Queue from './Queue';
+import { Queue } from './Queue';
 
 /** Properties that update() is not allowed to touch. */
 const PROTECTED_PROPERTIES: any = {
@@ -15,7 +15,7 @@ export class JobControl<P extends Job> {
   public readonly queue: Queue<P>;
   private updates: any;
   private logger?: Logger<P>;
-  private commit: () => void;
+  private commit: () => Promise<P>;
 
   /** Construct a new JobControl object.
       @param queue The queue containing the job.
@@ -23,7 +23,7 @@ export class JobControl<P extends Job> {
       @param updates An object containing all of the fields of the job that will be changed
           at the end of the transaction.
   */
-  constructor(queue: Queue<P>, job: P, updates: object, commit: () => void) {
+  constructor(queue: Queue<P>, job: P, updates: object, commit: () => Promise<P>) {
     this.queue = queue;
     this.job = job;
     this.updates = updates;
@@ -44,18 +44,25 @@ export class JobControl<P extends Job> {
   }
 
   /** Set properties to be updated. */
+  public setState(newState: RunState): this {
+    this.job.state = this.updates.state = newState;
+    return this;
+  }
+
+  /** Set properties to be updated. */
   public update(properties: Partial<P>): this {
     const filteredProperties: any = {};
     for (const key of Object.getOwnPropertyNames(properties)) {
       if (!PROTECTED_PROPERTIES[key]) {
         this.updates[key] = (properties as any)[key];
+        (this.job as any)[key] = (properties as any)[key];
       }
     }
     return this;
   }
 
   /** Reschedule the job for a future time and commit changes. */
-  public reschedule(when?: number | Date): this {
+  public reschedule(when?: number | Date): Promise<P> {
     if (typeof when === 'number') {
       this.updates.when = this.queue.clock.after(when);
     } else if (when) {
@@ -63,48 +70,47 @@ export class JobControl<P extends Job> {
     } else {
       this.updates.when = this.queue.clock.after(this.queue.checkInterval);
     }
-    this.commit();
-    return this;
+    return this.commit();
   }
 
   /** Mark the job as cancelled and commit changes. */
-  public cancel(reason?: string | Error): void {
+  public cancel(reason?: string | Error): Promise<P> {
     let message = 'Job Cancelled';
     if (typeof(reason) === 'string') {
       message = `Job Cancelled: ${reason}`;
     } else if (reason && typeof reason.toString === 'function') {
       message = `Job Cancelled: ${reason.toString()}`;
     }
-    this.queue.addLog('info', this.job.id, message);
-    this.updates.state = RunState.CANCELLED;
-    this.updates.endedAt = new Date();
-    this.commit();
+    this.queue.addLog(this.job.id, 'info', message);
+    this.job.state = this.updates.state = RunState.CANCELLED;
+    this.job.endedAt = this.updates.endedAt = new Date();
+    return this.commit();
   }
 
   /** Mark the job as failed and commit changes. */
-  public fail(reason?: string | Error): void {
+  public fail(reason?: string | Error): Promise<P> {
     let message = 'Job Failed';
     if (typeof(reason) === 'string') {
       message = `Job Failed: ${reason}`;
     } else if (reason && typeof reason.toString === 'function') {
       message = `Job Failed: ${reason.toString()}`;
     }
-    this.queue.addLog('info', this.job.id, message);
-    this.updates.state = RunState.FAILED;
-    this.updates.endedAt = new Date();
-    this.commit();
+    this.queue.addLog(this.job.id, 'info', message);
+    this.job.state = this.updates.state = RunState.FAILED;
+    this.job.endedAt = this.updates.endedAt = new Date();
+    return this.commit();
   }
 
   /** Mark the job as finished and commit changes. */
-  public finish(message?: string): void {
-    this.queue.addLog('info', this.job.id, message || 'Job finished successfully');
-    this.updates.state = RunState.COMPLETED;
-    this.updates.endedAt = new Date();
-    this.commit();
+  public finish(message?: string): Promise<P> {
+    this.queue.addLog(this.job.id, 'info', message || 'Job finished successfully');
+    this.job.state = this.updates.state = RunState.COMPLETED;
+    this.job.endedAt = this.updates.endedAt = new Date();
+    return this.commit();
   }
 
   /** Commit all of the changes we've made to the job. */
-  public end() {
-    this.commit();
+  public end(): Promise<P> {
+    return this.commit();
   }
 }

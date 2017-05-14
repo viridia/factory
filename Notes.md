@@ -25,3 +25,18 @@ Logging:
   * unless *every* director instance is going to listen to logs
   * maybe that's not so bad.
 * topic: job.{jobId}.logs:
+
+Intervals:
+Short: followUpIntervalMs (always 100ms)
+  * Time from recipe creation to first job status update.
+  * Task: Task ready to first run
+  * Task started; check on worker
+  * Task started, wake job
+  * Task start failed, wake job
+  * Task succeeded, wake job
+Medium: checkIntervalMs
+  * Job waiting for failed or cancelled tasks to finish.
+  * Task failed to query worker; retry
+Log: hibernateIntervalMs
+  * Job waiting for tasks to complete
+  * Task wait on worker

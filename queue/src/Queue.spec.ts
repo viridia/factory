@@ -6,7 +6,7 @@ import * as r from 'rethinkdb';
 import { RunState } from '../../common/types/api';
 import { Job } from './Job';
 import { JobControl } from './JobControl';
-import Queue from './Queue';
+import { Queue } from './Queue';
 import { FakeClock } from './testing/FakeClock';
 
 dotenv.config();
@@ -31,7 +31,11 @@ describe('Queue', function () {
 
   describe('real time', function () {
     before(function () {
-      this.queue = new Queue(this.connection, { db: 'Factory_UnitTest', checkInterval: 5 * 1000 });
+      this.queue = new Queue<Job>(
+          this.connection, {
+            db: 'Factory_UnitTest',
+            checkInterval: 5 * 1000,
+          });
       return this.queue.ready;
     });
 
@@ -47,18 +51,68 @@ describe('Queue', function () {
       ensure(this.queue.table).named('table').exists();
     });
 
-    it('createJob', function () {
-      const job = this.queue.createJob({});
+    it('create', function () {
+      const job = this.queue.create({});
       ensure(job.id).isUndefined();
-      ensure(job.state).equals(RunState.WAITING);
+      ensure(job.state).equals(RunState.READY);
+    });
+
+    it('create (properties)', function () {
+      const job = this.queue.create({ state: RunState.WAITING });
+      ensure(job.id).isUndefined();
+      ensure(job.state).named('state').equals(RunState.WAITING);
     });
 
     it('addJob', function () {
-      return this.queue.addJob(this.queue.createJob({})).then((job: Job) => {
+      return this.queue.addJob(this.queue.create({})).then((jobs: Job[]) => {
+        ensure(jobs).hasLength(1);
+        const job = jobs[0];
         ensure(job.id).hasType('string');
         ensure(job.id.length).isGreaterThan(0);
-        ensure(job.state).equals(RunState.WAITING);
+        ensure(job.state).equals(RunState.READY);
         ensure(new Date(job.when)).isNotGreaterThan(new Date());
+      });
+    });
+
+    it('addJob state=WAITING', function () {
+      return this.queue.addJob(this.queue.create({ state: RunState.WAITING }))
+      .then((jobs: Job[]) => {
+        ensure(jobs).hasLength(1);
+        const job = jobs[0];
+        ensure(job.id).hasType('string');
+        ensure(job.id.length).isGreaterThan(0);
+        ensure(job.state).named('state').equals(RunState.WAITING);
+        ensure(new Date(job.when)).isNotGreaterThan(new Date());
+      });
+    });
+
+    it('addJob several', function () {
+      return this.queue.addJob([
+        this.queue.create({}),
+        this.queue.create({}),
+        this.queue.create({}),
+      ]).then((jobs: Job[]) => {
+        ensure(jobs).hasLength(3);
+      });
+    });
+
+    it('external cancel', function (done) {
+      this.queue.addJob(this.queue.create({})).then((jobs: Job[]) => {
+        const id = jobs[0].id;
+        this.queue.cancel(id).then((count: number) => {
+          ensure(count).named('jobs cancelled').equals(1);
+          done();
+        });
+      });
+    });
+
+    it('delete', function (done) {
+      this.queue.addJob(this.queue.create({})).then((jobs: Job[]) => {
+        const id = jobs[0].id;
+        this.queue.delete(id).then((count: number) => {
+          ensure(count).named('jobs deleted').equals(1);
+          done();
+        });
       });
     });
 
@@ -66,7 +120,7 @@ describe('Queue', function () {
       this.queue.process((job: any) => {
         done();
       });
-      this.queue.addJob(this.queue.createJob({}));
+      this.queue.addJob(this.queue.create({}));
     });
 
     it.skip('process with delay', function (done) {
@@ -74,7 +128,7 @@ describe('Queue', function () {
         done();
       });
       setTimeout(() => {
-        this.queue.addJob(this.queue.createJob({}));
+        this.queue.addJob(this.queue.create({}));
       }, 100);
     });
 
@@ -85,7 +139,7 @@ describe('Queue', function () {
         done();
       });
       setTimeout(() => {
-        this.queue.addJob(this.queue.createJob({}));
+        this.queue.addJob(this.queue.create({}));
       }, 6000);
     });
   });
@@ -110,7 +164,7 @@ describe('Queue', function () {
         ensure(this.queue.clock.time).equals(1001);
         done();
       });
-      this.queue.addJob(this.queue.createJob({}));
+      this.queue.addJob(this.queue.create({}));
       this.queue.clock.advance(1);
     });
 
@@ -123,8 +177,8 @@ describe('Queue', function () {
           done();
         }
       });
-      this.queue.addJob(this.queue.createJob({}));
-      this.queue.addJob(this.queue.createJob({}));
+      this.queue.addJob(this.queue.create({}));
+      this.queue.addJob(this.queue.create({}));
       this.queue.clock.advance(1);
     });
 
@@ -133,7 +187,7 @@ describe('Queue', function () {
         ensure(this.queue.clock.time).equals(1100);
         done();
       });
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(100) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }));
       this.queue.clock.advance(99); // Shouldn't wake at 99
       this.queue.clock.advance(1); // But only at 100
     });
@@ -158,9 +212,9 @@ describe('Queue', function () {
         }
         processCount += 1;
       });
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(100) }));
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(6000) }));
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(15000) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(6000) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(15000) }));
       this.queue.clock.advance(99);
       this.queue.clock.advance(1);
     });
@@ -175,7 +229,7 @@ describe('Queue', function () {
         processCount += 1;
         done();
       });
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(100) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }));
       this.queue.clock.advance(100);
     });
 
@@ -189,7 +243,7 @@ describe('Queue', function () {
         processCount += 1;
         done();
       });
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(100) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }));
       this.queue.clock.advance(100);
     });
 
@@ -206,8 +260,62 @@ describe('Queue', function () {
         }
         processCount += 1;
       });
-      this.queue.addJob(this.queue.createJob({ when: this.queue.clock.after(100) }));
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }));
       this.queue.clock.advance(100);
+    });
+
+    it('wake soon', function (done) {
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }))
+      .then((jobs: Job[]) => {
+        this.queue.wake(jobs[0].id, 50).then((count: number) => {
+          ensure(count).named('wake count').equals(1);
+          done();
+        });
+      });
+    });
+
+    it('wake not soon', function (done) {
+      this.queue.addJob(this.queue.create({ when: this.queue.clock.after(100) }))
+      .then((jobs: Job[]) => {
+        this.queue.wake(jobs[0].id, 150).then((count: number) => {
+          ensure(count).named('wake count').equals(0);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('processOne', function () {
+    before(function () {
+      this.queue = new Queue(this.connection, { db: 'Factory_UnitTest', checkInterval: 5 * 1000 });
+      return this.queue.ready;
+    });
+
+    beforeEach(function () {
+      this.queue.clock = new FakeClock(1000);
+      // Access to private method.
+      this.processOne = this.queue.processOneJob.bind(this.queue);
+      return this.queue.clear();
+    });
+
+    afterEach(function () {
+      return this.queue.stop();
+    });
+
+    it('reschedule', function (done) {
+      this.queue.addJob(this.queue.create({})).then((added: Job[]) => {
+        this.queue.processCallback = (job: Job, jobControl: JobControl<Job>) => {
+          return jobControl.reschedule(100).then(() => {
+            return this.queue.get(job.id).then((updated: Job) => {
+              ensure(updated.state).equals(RunState.RUNNING);
+              ensure(updated.when.getTime()).equals(1200);
+              done();
+            });
+          });
+        };
+        this.queue.clock.advance(100);
+        this.processOne(added[0].id);
+      });
     });
   });
 });

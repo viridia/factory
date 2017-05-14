@@ -1,4 +1,4 @@
-import { Job, JobQuery, JobRequest, Task } from 'common/types/api';
+import { Job, JobQuery, JobRequest, Task } from 'api';
 import { Action, createAction } from 'redux-actions';
 import {
   CREATE_JOB_FAILED,
@@ -28,9 +28,9 @@ import {
   TASKS_UPDATED,
 } from './actionIds';
 
-export const createJobRequested = createAction<undefined>(CREATE_JOB_REQUESTED);
-export const createJobOK = createAction<undefined>(CREATE_JOB_OK);
-export const createJobFailed = createAction<string>(CREATE_JOB_FAILED);
+export const creatRequested = createAction<undefined>(CREATE_JOB_REQUESTED);
+export const creatOK = createAction<undefined>(CREATE_JOB_OK);
+export const creatFailed = createAction<string>(CREATE_JOB_FAILED);
 export const jobsAdded = createAction<Job[]>(JOBS_ADDED);
 export const jobsDeleted = createAction<string[]>(JOBS_DELETED);
 export const jobsUpdated = createAction<Job[]>(JOBS_UPDATED);

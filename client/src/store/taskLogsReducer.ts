@@ -1,5 +1,5 @@
+import { LogEntry } from 'api';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { LogEntry } from 'common/types/api';
 import { Dispatch } from 'redux';
 import { Action, handleActions } from 'redux-actions';
 import {
