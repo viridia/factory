@@ -3,15 +3,15 @@ import { LogEntry } from 'common/types/api';
 import { Dispatch } from 'redux';
 import { Action, handleActions } from 'redux-actions';
 import {
-  JOB_LOGS_ERROR,
-  JOB_LOGS_RECEIVED,
-  JOB_LOGS_REQUESTED,
-//   JOBS_UPDATED,
+  TASK_LOGS_ERROR,
+  TASK_LOGS_RECEIVED,
+  TASK_LOGS_REQUESTED,
+//   TASK_UPDATED,
 } from './actionIds';
 import {
-  jobsLogsError,
-  jobsLogsReceived,
-  jobsLogsRequested,
+  taskLogsError,
+  taskLogsReceived,
+  taskLogsRequested,
 } from './actions';
 import { LogsQueryResult } from './types/LogsQueryResult';
 
@@ -23,30 +23,30 @@ const initialState: LogsQueryResult = {
 };
 
 // // Async action which retrieves the job logs.
-export function fetchJobLogs(jobId: string) {
+export function fetchTaskLogs(jobId: string, taskId: string) {
   return (dispatch: Dispatch<{}>, getState: () => LogsQueryResult) => {
     // Update the store to indicate that we're in the process of loading
-    dispatch(jobsLogsRequested());
+    dispatch(taskLogsRequested());
     // Request job list from backend.
-    return axios.get(`/api/v1/jobs/${jobId}/logs`)
+    return axios.get(`/api/v1/jobs/${jobId}/tasks/${taskId}/logs`)
     .then((resp: AxiosResponse) => {
       // Update the store.
-      dispatch(jobsLogsReceived(resp.data));
+      dispatch(taskLogsReceived(resp.data));
     }, (error: AxiosError) => {
       // Signal an error.
       if (error.response) {
-        dispatch(jobsLogsError(error.response.statusText));
+        dispatch(taskLogsError(error.response.statusText));
       } else {
-        dispatch(jobsLogsError(error.message));
+        dispatch(taskLogsError(error.message));
       }
     });
   };
 }
 
 /** Action handlers. */
-const jobLogsReducer = handleActions<LogsQueryResult>({
-  [JOB_LOGS_REQUESTED]: (state: LogsQueryResult) => ({ ...state, loading: true, error: null }),
-  [JOB_LOGS_RECEIVED]: (state: LogsQueryResult, action: Action<[LogEntry]>) => {
+const taskLogsReducer = handleActions<LogsQueryResult>({
+  [TASK_LOGS_REQUESTED]: (state: LogsQueryResult) => ({ ...state, loading: true, error: null }),
+  [TASK_LOGS_RECEIVED]: (state: LogsQueryResult, action: Action<[LogEntry]>) => {
     return {
       ...state,
       error: null,
@@ -54,12 +54,12 @@ const jobLogsReducer = handleActions<LogsQueryResult>({
       loading: false,
     };
   },
-  [JOB_LOGS_ERROR]: (state: LogsQueryResult, action: Action<string>) => {
+  [TASK_LOGS_ERROR]: (state: LogsQueryResult, action: Action<string>) => {
     return { ...state, loading: false, error: action.payload };
   },
-//   [JOB_LOGS_UPDATED]: (state: LogsQueryResult, action: Action<Job[]>) => {
+//   [TASK_LOGS_UPDATED]: (state: LogsQueryResult, action: Action<Job[]>) => {
 //     return { ...state, byId };
 //   },
 }, initialState);
 
-export default jobLogsReducer;
+export default taskLogsReducer;

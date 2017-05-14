@@ -6,6 +6,7 @@ import JobDetails from './JobDetails';
 import JobEntryForm from './JobEntryForm';
 import JobList from './JobList';
 import './Page.scss';
+import TaskControlForm from './TaskControlForm';
 import TaskDetails from './TaskDetails';
 import TaskList from './TaskList';
 
@@ -34,6 +35,7 @@ export default class Page extends React.Component<undefined, undefined> {
             <section className="task-details border-panel">
               <header>Task Details</header>
               <TaskDetails />
+              <TaskControlForm />
             </section>
           </section>
         </section>

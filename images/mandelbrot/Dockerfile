@@ -11,7 +11,7 @@ WORKDIR ${WORK}
 ENV SANDBOX=/usr/nimble/sandbox
 RUN mkdir -p ${SANDBOX}
 
-# Copy in the scripts we need.
+# Copy in the sources we need.
 ADD mandelbrot.go ${WORK}/
 run go build mandelbrot.go
 
@@ -19,4 +19,4 @@ ADD start.sh ${WORK}/
 run chmod a+x start.sh
 
 # Run the command
-ENTRYPOINT ["./start.sh"]
+ENTRYPOINT ["/usr/nimble/factory/start.sh"]

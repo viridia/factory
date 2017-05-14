@@ -4,6 +4,7 @@ import createJobStatusReducer from './createJobStatusReducer';
 import jobLogsReducer from './jobLogsReducer';
 import jobsReducer from './jobsReducer';
 import subscriptionsReducer from './subscriptionsReducer';
+import taskLogsReducer from './taskLogsReducer';
 import tasksReducer from './tasksReducer';
 
 const store = createStore(combineReducers({
@@ -12,6 +13,7 @@ const store = createStore(combineReducers({
   createJobStatus: createJobStatusReducer,
   subscriptions: subscriptionsReducer,
   tasks: tasksReducer,
+  taskLogs: taskLogsReducer,
 }), applyMiddleware(thunk));
 
 export default store;

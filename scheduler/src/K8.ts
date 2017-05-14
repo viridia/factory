@@ -50,6 +50,7 @@ export default class K8 {
               // command: '',
               args: task.args,
               imagePullPolicy: 'Never',
+              restartPolicy: 'Never',
               volumeMounts: [{ name: 'sandbox', mountPath: '/usr/nimble/sandbox' }],
             }],
             volumes: [{ name: 'sandbox', hostDir: '/usr/nimble/sandbox' }],
@@ -115,6 +116,14 @@ export default class K8 {
       res.on('end', (data: any) => {
         logger.debug('Watch stream ended.');
         endCallback();
+      });
+      res.on('close', (data: any) => {
+        logger.debug('Watch stream closed.');
+        // endCallback();
+      });
+      res.on('error', (data: any) => {
+        logger.debug('Watch stream error.');
+        // endCallback();
       });
     });
     req.end();

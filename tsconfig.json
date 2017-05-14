@@ -14,6 +14,7 @@
   "include": [
     "common/**/*",
     "director/src/**/*",
+    "queue/src/**/*",
     "scheduler/src/**/*"
   ],
   "exclude": [

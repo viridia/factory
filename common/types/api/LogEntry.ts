@@ -1,5 +1,5 @@
 export interface LogEntry {
   message: string;
-  type: string;
+  level: string;
   date: string;
 }

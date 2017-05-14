@@ -27,9 +27,26 @@
         background-color: #244;
         overflow-y: auto;
         padding: 4px;
-        color: #cf8;
         font-family: monospace;
         font-size: 14px;
+
+        > .entry {
+          > .date {
+            color: desaturate(darken(#adb, 10%), 20%);
+          }
+
+          &.info > .message {
+            color: #cda;
+          }
+
+          &.warning > .message {
+            color: #fd4;
+          }
+
+          &.error > .message {
+            color: #f77;
+          }
+        }
       }
     }
   }

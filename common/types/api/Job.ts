@@ -27,7 +27,7 @@ export interface Job {
   description: string;
 
   /** Arguments specified by the user submitting the job. */
-  submissionArgs: { [key: string]: any };
+  submissionParams: { [key: string]: any };
 
   /** The current execution state of the job. */
   state: RunState;

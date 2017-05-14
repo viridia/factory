@@ -18,7 +18,7 @@ export class JobRecord extends Queue.Job {
       mainFileName: record.mainFileName,
       recipe: record.recipe,
       description: record.description,
-      submissionArgs: record.submissionArgs,
+      submissionParams: record.submissionParams,
       state: runState,
       createdAt: record.dateCreated,
       startedAt: record.dateStarted,
@@ -43,7 +43,7 @@ export class JobRecord extends Queue.Job {
   public mainFileName: string;
   public recipe: string;
   public description: string;
-  public submissionArgs: { [key: string]: any };
+  public submissionParams: { [key: string]: any };
   public runState: RunState;
   public waitingTasks: string[];  // Task ids whose dependencies haven't been met.
   public runningTasks: string[];  // Task ids that are running

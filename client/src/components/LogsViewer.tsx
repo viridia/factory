@@ -1,4 +1,5 @@
 import * as classNames from 'classnames';
+import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { LogsQueryResult } from '../store/types/LogsQueryResult';
@@ -43,9 +44,12 @@ export class LogsViewer extends React.Component<Props, State> {
         </Modal.Header>
         <Modal.Body>
           <section className="log-entries">
-            {this.props.logs.entries.map(l => (<div className={classNames('entry', l.type)}>
-              {l.message}
-            </div>))}
+            {this.props.logs.loading ?
+              <div className="loading">loading...</div> :
+              this.props.logs.entries.map(l => (<div className={classNames('entry', l.level)}>
+                <span className="date">[{dateformat(l.date)}]</span>&nbsp;
+                <span className="message">{l.message}</span>
+              </div>))}
           </section>
         </Modal.Body>
         <Modal.Footer>

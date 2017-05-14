@@ -4,7 +4,7 @@ import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as Queue from 'rethinkdb-job-queue';
 import {
-  Job, JobChangeNotification, JobChangeRequest, JobRequest, RunState, Task,
+  Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
 } from '../../common/types/api';
 import { JobRecord, TaskRecord } from '../../common/types/queue';
 import { logger } from './logger';
@@ -51,7 +51,6 @@ export default class JobRoutes {
     this.router.get('/:id/logs', this.getJobLogs.bind(this));
     this.router.get('/', this.queryJobs.bind(this));
     this.router.post('/', this.createJob.bind(this));
-    // this.router.get('/:id/logs', this.getJobLogs.bind(this));
   }
 
   private getJob(req: Request, res: Response, next: NextFunction): void {
@@ -88,15 +87,20 @@ export default class JobRoutes {
         }
         this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
           const promises = [];
+          promises.push(
+            this.jobQueue.r.table('JobQueue_Logs').filter({ job: req.params.id }).delete().run());
           for (const task of tasks) {
             if (task.k8Link) {
               logger.info(`Resource ${task.k8Link} removed.`);
               promises.push(this.k8Api.delete(task.k8Link));
+              promises.push(
+                this.taskQueue.r.table('TaskQueue_Logs').filter({ job: task.id }).delete().run());
             }
           }
+
           // Wait for deletions, return tasks either way.
           return Promise.all(promises).then(() => tasks, () => {
-            logger.info('resource deletion failed.');
+            logger.info('job resource deletion or log deletion failed.');
             return tasks;
           });
         }).then(tasks => {
@@ -147,7 +151,7 @@ export default class JobRoutes {
       mainFileName: jr.mainFileName,
       recipe: jr.recipe,
       description: jr.description,
-      submissionArgs: jr.args || {},
+      submissionParams: jr.args || {},
       runState: RunState.READY,
       waitingTasks: [],
       runningTasks: [],
@@ -186,24 +190,33 @@ export default class JobRoutes {
   }
 
   private getJobLogs(req: Request, res: Response, next: NextFunction): void {
-    this.taskQueue.getJob(req.params.id).then(jobs => {
-      if (jobs.length === 1) {
-        res.json(jobs[0].log.map(l => ({
-          date: l.date,
-          message: l.message,
-          type: l.type,
-        })));
-      } else {
-        res.json([]);
-      }
-    }, error => {
+    this.jobQueue.r.table('JobQueue_Logs').filter({ job: req.params.id }).orderBy('date').run()
+    .then((entries: any[]) => {
+      res.json(entries);
+    }, (error: any) => {
       res.status(500).json({ error: 'internal', message: error.message });
       logger.error(`Error getting job logs:`, error);
     });
   }
 
   private getTaskLogs(req: Request, res: Response, next: NextFunction): void {
-    // res.json({ message: `requesting task ${req.params.id}.` });
+    this.taskQueue.findJob({ jobId: req.params.id, taskId: req.params.task }).then(tasks => {
+      if (tasks.length === 1) {
+        this.taskQueue.r.table('TaskQueue_Logs').filter({ job: tasks[0].id }).orderBy('date').run()
+        .then((entries: any[]) => {
+          res.json(entries);
+        }, (error: any) => {
+          res.status(500).json({ error: 'internal', message: error.message });
+          logger.error(`Error getting job logs:`, error);
+        });
+      } else {
+        logger.error(`Tasks ${req.params.id}:${req.params.task} not found.`, tasks.length);
+        res.json([]);
+      }
+    }, error => {
+      res.status(500).json({ error: 'internal', message: error.message });
+      logger.error(`Error getting job tasks:`, error);
+    });
   }
 
   private cancelJob(job: JobRecord, res: Response) {
