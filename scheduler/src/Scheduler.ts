@@ -588,15 +588,13 @@ export default class Scheduler {
   private setTaskRunState(task: TaskRecord, rs: RunState) {
     logger.verbose(`Task ${task.jobId}:${task.taskId} state changed [${RunState[rs]}].`);
     if (task.runState !== rs) {
-      console.log('a');
       task.runState = rs;
       task.setDateEnable(new Date(Date.now() + this.shortInterval));
-      console.log('b');
       this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-      console.log('c');
       return task.update().then(() => {
-        console.log('d');
         return this.wakeJob(task.jobId);
+      }, error => {
+        console.log(error);
       });
     } else {
       return Promise.resolve();

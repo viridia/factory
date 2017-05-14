@@ -5,24 +5,13 @@ import { RunState } from '../../common/types/api';
 import { Clock } from './Clock';
 import { Job } from './Job';
 import { JobControl } from './JobControl';
+import { LogEntry } from './LogEntry';
 
 export interface QueueOptions {
   db?: string;
   table?: string;
   checkInterval?: number;
   processTimeout?: number;
-}
-
-export interface JobSpec {
-  label?: string;
-  when?: Date;
-}
-
-export interface LogEntry {
-  date: Date;
-  level: string;
-  message: string;
-  data?: any;
 }
 
 export interface Logger {
@@ -117,15 +106,21 @@ export default class Queue<P extends Job> extends EventEmitter {
 
   public get(jobId: string): Promise<P> {
     return this.db.table(this.table).get(jobId).run(this.conn).then(cursor => {
-      console.log(cursor);
-      return {};
+      return cursor.toArray().then(jobs => {
+        return jobs[0];
+      });
     });
   }
 
   public getControl(jobId: string): Promise<JobControl<P>> {
     return this.db.table(this.table).get(jobId).run(this.conn).then(cursor => {
-      console.log(cursor);
-      return {};
+      const pending = {};
+      return cursor.toArray().then(jobs => {
+        const job = jobs[0];
+        return new JobControl<P>(this, job, pending, () => {
+          this.db.table(this.table).get(job.id).update(pending).run(this.conn);
+        });
+      });
     });
   }
 
@@ -227,7 +222,6 @@ export default class Queue<P extends Job> extends EventEmitter {
     if (updateResult.replaced) {
       // We got there before any other process did.
       const job: P = updateResult.changes[0].new_val;
-      // console.log('our turn:', job);
       // Set up the pending changes to make to the object.
       const pending = {
         // Default date is the next check interval.

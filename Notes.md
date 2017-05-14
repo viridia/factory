@@ -15,6 +15,8 @@
   * real-time logging.
 
 Future:
+* Figure out why we can't mount the sandbox directory
+* Try running the queue on os x.
 * Improve JSON schema error messages.
 * Logging
 
