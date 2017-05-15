@@ -10,16 +10,16 @@ spec:
       imagePullPolicy: Never
       stdin: true
       tty: true
-      volumeMounts:
-        - mountPath: /usr/nimble/src
-          name: src
+      # volumeMounts:
+      #   - mountPath: /usr/nimble/src
+      #     name: src
       volumeMounts:
         - mountPath: /usr/nimble/sandbox
           name: sandbox
   volumes:
-    - name: src
-      hostPath:
-        path: /usr/nimble/src
+    # - name: src
+    #   hostPath:
+    #     path: /usr/nimble/src
     - name: sandbox
       hostPath:
         path: /usr/nimble/sandbox

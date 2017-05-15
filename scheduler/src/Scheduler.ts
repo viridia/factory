@@ -10,6 +10,13 @@ import { JobControl, Queue } from '../../queue';
 import K8 from './K8';
 import { logger } from './logger';
 
+function quoteArg(arg: string): string {
+  if (/[\s\"]/.exec(arg)) {
+    return `"${arg}"`;
+  }
+  return arg;
+}
+
 export default class Scheduler {
   private jobQueue: Queue<JobRecord>;
   private taskQueue: Queue<TaskRecord>;
@@ -169,7 +176,6 @@ export default class Scheduler {
       jobControl.log.info('Cancelling tasks.');
       for (const task of tasks) {
         if (task.state !== RunState.CANCELLED && task.state !== RunState.FAILED) {
-          task.state = RunState.CANCELLING;
           promises.push(this.taskQueue.getControl(task).setState(RunState.CANCELLING).end());
         }
       }
@@ -228,7 +234,6 @@ export default class Scheduler {
               // If any of our dependenies are cancelled, then this is too.
               logger.warn(`Task ${task.jobId}:${task.taskId} cancelled because ` +
                   'it depends on a task which was also cancelled.');
-              task.state = RunState.CANCELLED;
               taskControl.log.warning('Task cancelled because a task it depends on was cancelled.');
               jobControl.log.warning(
                   `Task '${task.taskId}' cancelled because a task it depends on was cancelled.`);
@@ -328,6 +333,7 @@ export default class Scheduler {
       }
       this.emitJobUpdate(job);
       const tasksChanged = Object.getOwnPropertyNames(taskChangedMap);
+      logger.verbose(`${tasksChanged.length} tasks updated, sending notification.`, taskChangedMap);
       if (tasksChanged.length > 0) {
         this.notifyTaskChange(job.id, {
           tasksUpdated: tasksChanged.map(id => TaskRecord.serialize(taskChangedMap[id])),
@@ -344,9 +350,11 @@ export default class Scheduler {
       this.k8.create(task).then(resp => {
         logger.info(`Task ${task.jobId}:${task.taskId} worker started.`);
         taskControl.log.info('Task worker started.');
+        taskControl.log.info(`Image: [${task.image}]`);
+        taskControl.log.info(`Command arguments: [${task.args.map(quoteArg).join(' ')}]`);
         this.jobQueue.addLog(task.jobId, 'info', `Task [${task.taskId}] worker started.`);
         // console.log('k8 initial status:', resp.data.status);
-        taskControl.setState(RunState.READY).update({
+        taskControl.setState(RunState.RUNNING).update({
           k8Link: resp.data.metadata.selfLink,
         }).reschedule(this.mediumInterval).then(this.emitTaskUpdate);
         this.jobQueue.wake(task.jobId, 1000);
@@ -395,11 +403,9 @@ export default class Scheduler {
                 this.emitTaskUpdate(task);
                 return this.jobQueue.wake(task.jobId, this.shortInterval);
               });
-              // this.setTaskStatusChange(task, RunState.FAILED);
               return;
             }
           });
-          // this.k8.getPodStatus(task.jobId, task.taskId);
           // console.log('updateTaskStatus/K8 job status:', resp.status);
           // More work to do, wait...
           taskControl.reschedule(this.longInterval);
@@ -448,6 +454,7 @@ export default class Scheduler {
           }
         } else if (jobMessage.status.failed > 0) {
           this.onWorkerFailed(task, taskControl);
+          console.log(jobMessage);
         } else if (this.isComplete(jobMessage)) {
           this.onWorkerSucceeded(task, taskControl);
         } else {
@@ -526,7 +533,7 @@ export default class Scheduler {
       return this.k8.deleteJob(task).then(resp => {
         taskControl.update({ k8Link: null });
       }, error => {
-        logger.error('K8 cancel failed:', error.response);
+        logger.error('K8 cancel failed:', error);
         taskControl.log.error('Failed to release worker resources.');
         taskControl.update({ k8Link: null }); // Consider it deleted anyway
       });

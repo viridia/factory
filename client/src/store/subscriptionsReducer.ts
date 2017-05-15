@@ -35,6 +35,7 @@ export function updateProjectSubscriptions(projectIds: Immutable.Set<number>) {
       projectIds.forEach(projectId => {
         if (projectId !== undefined && !mutable.has(projectId)) {
           const callback = (resp: any) => {
+            console.info('project message received', Object.getOwnPropertyNames(resp));
             if (resp.jobsAdded) {
               dispatch(jobsAdded(resp.jobsAdded));
             }
@@ -69,10 +70,13 @@ export function updateJobSubscriptions(jobId: string) {
       }
       if (jobId != null) {
         const callback = (resp: any) => {
+          console.info('job message received:', Object.getOwnPropertyNames(resp));
           if (resp.tasksCancelled) {
+            console.info('tasks cancelled:', resp.tasksCancelled.length);
             dispatch(tasksCancelled(resp.tasksCancelled));
           }
           if (resp.tasksUpdated) {
+            console.info('tasks updated:', resp.tasksUpdated.length);
             dispatch(tasksUpdated(resp.tasksUpdated));
           }
         };

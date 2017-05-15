@@ -17,6 +17,7 @@ if [[ $# -eq 0 ]]; then
   echo "  ds stop - stop the deepstream.io service."
   echo "  proxy start - start the proxy to the Kubernetes control port."
   echo "  proxy stop - stop the proxy to the Kubernetes control port."
+  echo "  prune - delete all factory pods."
   exit 1
 fi
 
@@ -117,6 +118,10 @@ case $1 in
         ;;
 
     esac
+    ;;
+
+  prune)
+    kubectl delete pod --selector=group=factory
     ;;
 
   *)

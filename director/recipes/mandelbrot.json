@@ -37,9 +37,7 @@
       ],
       "workdir": "/usr/nimble/sandbox",
       "args": [
-        {
-          "$foreach": ["n", "{{frames}}", "image.{{n:03}}.jpg"]
-        }
+        "-r", "30", "-s", "720x480", "-y", "-i", "image.%03d.jpg", "movie.mp4"
       ],
       "inputs": [
         {
