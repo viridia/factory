@@ -48,6 +48,11 @@ Start the RethinkDB database in the minikube cluster:
 
     vm db start
 
+Open up the rethinkdb admin page in a browser:
+
+    minikube service rethinkdb-admin --url
+    (cut and paste the resulting url into your browser)
+
 Start the Deepstream.io service in the minikube cluster:
 
     vm ds start
@@ -65,6 +70,10 @@ In separate shell windows, start each of the servers:
 Once the director is running, seed the intitial recipe files into the database:
 
     ./director/bin/uploadrecipe.js ./director/recipes/mandelbrot.json
+
+Now you can view the frontend at the following url:
+
+    http://localhost:8087
 
 ## k8shell
 
