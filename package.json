@@ -6,6 +6,7 @@
   "author": "Talin <viridia@gmail.com>",
   "license": "UNLICENSED",
   "scripts": {
+    "build-image-agent": "cd images/agent && docker build --rm -f Dockerfile -t agent:0.0.1 .",
     "build-image-mandelbrot": "cd images/mandelbrot && docker build --rm -f Dockerfile -t mandelbrot:0.0.1 .",
     "build-image-k8shell": "cd images/k8shell && docker build --rm -f Dockerfile -t k8shell:0.0.1 .",
     "debug-director": "RETHINKDB_PROXY_SERVICE_HOST=$(minikube ip) DEEPSTREAM_SERVICE_HOST=$(minikube ip) ts-node --inspect --debug-brk ./director/src/index.ts",
@@ -45,7 +46,6 @@
     "immutable": "^3.8.1",
     "nodemon": "^1.11.0",
     "rethinkdb": "^2.3.3",
-    "rethinkdb-job-queue": "^3.1.2",
     "ts-node": "^3.0.2",
     "typescript": "^2.3.2",
     "winston": "^2.3.1"

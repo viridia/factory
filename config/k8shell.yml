@@ -16,6 +16,9 @@ spec:
       volumeMounts:
         - mountPath: /usr/nimble/sandbox
           name: sandbox
+      volumeMounts:
+        - mountPath: /var/nimble/log
+          name: varlog
   volumes:
     # - name: src
     #   hostPath:
@@ -23,3 +26,5 @@ spec:
     - name: sandbox
       hostPath:
         path: /usr/nimble/sandbox
+    - name: varlog
+      emptyDir: {}

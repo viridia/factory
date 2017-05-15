@@ -1,0 +1,26 @@
+{
+  "name": "factory.agent",
+  "version": "0.0.1",
+  "description": "Render farm logging agent",
+  "main": "index.ts",
+  "author": "Talin <viridia@gmail.com>",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "RETHINKDB_PROXY_SERVICE_HOST=$(minikube ip) DEEPSTREAM_SERVICE_HOST=$(minikube ip) ts-node index.ts",
+  },
+  "devDependencies": {
+    "@types/dotenv": "^4.0.0",
+    "@types/node": "^7.0.14",
+    "@types/rethinkdb": "^2.3.2",
+    "@types/winston": "^2.3.2",
+    "tslint": "^5.1.0",
+    "tslint-react": "^3.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^4.0.0",
+    "rethinkdb": "^2.3.3",
+    "ts-node": "^3.0.2",
+    "typescript": "^2.3.2",
+    "winston": "^2.3.1"
+  }
+}

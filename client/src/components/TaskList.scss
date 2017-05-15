@@ -27,7 +27,7 @@
         .task-row {
           display: flex;
           flex-direction: row;
-          align-items: flex-start;
+          align-items: center;
           cursor: pointer;
           background-color: #eee;
           user-select: none;
@@ -38,7 +38,41 @@
             background-color: #ddd;
           }
           &.selected {
-            background-color: #aaf777 ;
+            background-color: #caf7a7;
+          }
+          &.ready .state > .pill {
+            background-color: #be7;
+          }
+          &.running .state > .pill {
+            background-color: #7c7;
+          }
+          &.completed .state > .pill {
+            background-color: #4da;
+          }
+          &.failed .state > .pill, &.failing .state > .pill  {
+            background-color: #faa;
+          }
+          &.cancelling .state > .pill {
+            background-color: #fea;
+          }
+          &.cancelled .state > .pill {
+            background-color: #fda;
+          }
+
+          td, th {
+            text-align: center;
+            padding: 3px 6px;
+            border-width: 0;
+            vertical-align: middle;
+            line-height: 22px;
+            white-space: nowrap;
+            &.state {
+              padding: 1px 3px;
+              > .pill {
+                border-radius: 4px;
+                padding: 1px 6px;
+              }
+            }
           }
         }
       }

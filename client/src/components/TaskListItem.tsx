@@ -28,38 +28,16 @@ class TaskListItem extends React.Component<MappedProps, undefined> {
     this.onClick = this.onClick.bind(this);
   }
 
-  public renderState(task: Task) {
-    switch (task.state) {
-      case RunState.WAITING:
-        return <div className="status waiting">WAITING</div>;
-      case RunState.READY:
-        return <div className="status waiting">READY</div>;
-      case RunState.RUNNING:
-        return <div className="status running">RUNNING</div>;
-      case RunState.COMPLETED:
-        return <div className="status completed">COMPLETED</div>;
-      case RunState.CANCELLING:
-        return <div className="status cancelling">CANCELLING</div>;
-      case RunState.CANCELLED:
-        return <div className="status cancelled">CANCELLED</div>;
-      case RunState.FAILING:
-        return <div className="status failing">FAILED</div>;
-      case RunState.FAILED:
-        return <div className="status failed">FAILED</div>;
-    }
-  }
-
   public render() {
     const { task, selected } = this.props;
+    const st = (RunState[task.state] || '').toLowerCase();
     return (
       <section
-          className={classnames('task-row', (RunState[task.state] || '').toLowerCase(), {
-            selected,
-          })}
+          className={classnames('task-row', st, { selected })}
           onClick={this.onClick}
       >
         <div className="id">{task.id}</div>
-        {this.renderState(task)}
+        <td className="state"><div className="pill">{RunState[task.state]}</div></td>
       </section>
     );
   }

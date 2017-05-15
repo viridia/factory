@@ -10,6 +10,7 @@ import { JobControl, Queue } from '../../queue';
 import K8 from './K8';
 import { logger } from './logger';
 
+// TODO: This could be much better. (Escape chars, etc.)
 function quoteArg(arg: string): string {
   if (/[\s\"]/.exec(arg)) {
     return `"${arg}"`;
@@ -170,26 +171,22 @@ export default class Scheduler {
     return this.taskQueue.addJob(readyTasks);
   }
 
-  private cancelTasks(job: JobRecord, jobControl: JobControl<JobRecord>) {
-    this.taskQueue.find({ jobId: job.id }).then(tasks => {
-      const promises = [];
-      jobControl.log.info('Cancelling tasks.');
-      for (const task of tasks) {
-        if (task.state !== RunState.CANCELLED && task.state !== RunState.FAILED) {
-          promises.push(this.taskQueue.getControl(task).setState(RunState.CANCELLING).end());
-        }
+  private async cancelTasks(job: JobRecord, jobControl: JobControl<JobRecord>) {
+    const tasks = await this.taskQueue.find({ jobId: job.id });
+    const promises = [];
+    jobControl.log.info('Cancelling tasks.');
+    for (const task of tasks) {
+      if (task.state !== RunState.CANCELLED && task.state !== RunState.FAILED) {
+        promises.push(this.taskQueue.getControl(task).setState(RunState.CANCELLING).end());
       }
-      // Wait until all tasks are done.
-      return Promise.all(promises).then(() => {
-        // Cancel the job.
-        return jobControl.cancel()
-          .then(this.emitJobUpdate)
-          .then(() => {
-            // Notify all the tasks as a single update.
-            this.notifyTaskChange(job.id, { tasksUpdated: tasks.map(TaskRecord.serialize) });
-          });
-      });
-    });
+    }
+    // Wait until all tasks are done.
+    await Promise.all(promises);
+    // Cancel the job.
+    const updated = await jobControl.cancel();
+    this.emitJobUpdate(updated);
+    // Notify all the tasks as a single update.
+    this.notifyTaskChange(job.id, { tasksUpdated: tasks.map(TaskRecord.serialize) });
   }
 
   private updateJobStatus(job: JobRecord, jobControl: JobControl<JobRecord>) {
@@ -433,7 +430,7 @@ export default class Scheduler {
     const jobId = jobMessage.metadata.labels['factory.job'];
     const taskId = jobMessage.metadata.labels['factory.task'];
     this.taskQueue.find({ jobId, taskId }).then((tasks: TaskRecord[]) => {
-      if (tasks.length === 1) {
+      if (tasks.length >= 1) {
         const task = tasks[0];
         const taskControl = this.taskQueue.getControl(task);
         if (task.state === RunState.FAILED ||
@@ -454,7 +451,7 @@ export default class Scheduler {
           }
         } else if (jobMessage.status.failed > 0) {
           this.onWorkerFailed(task, taskControl);
-          console.log(jobMessage);
+          // console.log(jobMessage);
         } else if (this.isComplete(jobMessage)) {
           this.onWorkerSucceeded(task, taskControl);
         } else {
@@ -480,30 +477,28 @@ export default class Scheduler {
           // logger.verbose(JSON.stringify(jobMessage.metadata.name, null, 2));
         }
       } else if (message.type !== 'DELETED') {
-        logger.warn(`Handling K8 status: task ${jobId}:${taskId} not found.`);
+        logger.warn(`Handling K8 status: task ${jobId}:${taskId} not found.`, tasks.length);
       }
     });
   }
 
-  private onWorkerSucceeded(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
+  private async onWorkerSucceeded(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
     logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] completed.`);
     this.jobQueue.addLog(task.jobId, 'info', `Task [${task.taskId}] completed.`);
     this.releaseTaskResources(task, taskControl);
-    return taskControl.finish().then(() => {
-      this.emitTaskUpdate(task);
-      return this.jobQueue.wake(task.jobId, this.shortInterval);
-    });
+    const updated = await taskControl.finish();
+    this.emitTaskUpdate(updated);
+    return this.jobQueue.wake(task.jobId, this.shortInterval);
   }
 
-  private onWorkerFailed(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
+  private async onWorkerFailed(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
     logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] failed.`);
     this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
     taskControl.log.error('Worker task failed.');
     this.releaseTaskResources(task, taskControl);
-    return taskControl.fail().then(() => {
-      this.emitTaskUpdate(task);
-      return this.jobQueue.wake(task.jobId, this.shortInterval);
-    });
+    const updated = await taskControl.fail();
+    this.emitTaskUpdate(updated);
+    return this.jobQueue.wake(task.jobId, this.shortInterval);
   }
 
   private isComplete(jobMessage: any) {
@@ -556,17 +551,5 @@ export default class Scheduler {
 
   private notifyTaskChange(jobId: string, payload: any) {
     this.deepstream.event.emit(`jobs.${jobId}`, payload);
-  }
-
-  private ensureTablesExist(tables: string[]) {
-    return this.db.tableList().run().then((existingTables: string[]) => {
-      const promises: Array<Promise<any>> = [];
-      for (const table of tables) {
-        if (existingTables.indexOf(table) < 0) {
-          promises.push(this.db.tableCreate(table).run());
-        }
-      }
-      return Promise.all(promises);
-    });
   }
 }

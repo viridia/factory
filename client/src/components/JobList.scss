@@ -28,6 +28,9 @@
       &.running .state > .pill {
         background-color: #7c7;
       }
+      &.completed .state > .pill {
+        background-color: #4da;
+      }
       &.failed .state > .pill, &.failing .state > .pill  {
         background-color: #faa;
       }
