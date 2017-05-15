@@ -1,17 +1,20 @@
 import * as Ajv from 'ajv';
 import { NextFunction, Request, Response, Router } from 'express';
+import { Connection, Db } from 'rethinkdb';
 import { Recipe } from '../../common/types/api';
 import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
 export default class JobRoutes {
   private router: Router;
-  private r: any; // RethinkDBDash connection handle
+  private conn: Connection;
+  private db: Db;
   private recipeSchema: Ajv.ValidateFunction;
 
-  constructor(r: any) {
+  constructor(conn: Connection, db: Db) {
     this.recipeSchema = loadSchema('./schemas/Recipe.schema.json');
-    this.r = r;
+    this.conn = conn;
+    this.db = db;
     this.router = Router();
     this.routes();
   }
@@ -76,8 +79,7 @@ export default class JobRoutes {
       return;
     }
     recipe.id = req.params.id;
-    this.r.db(process.env.DB_NAME).table('Recipes').insert(recipe, { conflict: 'replace' })
-    .then((result: any) => {
+    this.db.table('Recipes').insert(recipe, { conflict: 'replace' }).run(this.conn).then(result => {
       if (result.errors) {
         console.error('error inserting recipe:', result.first_error);
         res.status(500).json({ error: 'internal', message: result.first_error });

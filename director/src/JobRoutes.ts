@@ -2,11 +2,11 @@ import * as Ajv from 'ajv';
 import Axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
-import * as Queue from 'rethinkdb-job-queue';
 import {
   Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
 } from '../../common/types/api';
 import { JobRecord, TaskRecord } from '../../common/types/queue';
+import { JobControl, Queue } from '../../queue';
 import { logger } from './logger';
 import { ajv, loadSchema } from './schemas';
 
@@ -21,7 +21,6 @@ export default class JobRoutes {
 
   constructor(
       jobQueue: Queue<JobRecord>, taskQueue: Queue<TaskRecord>, deepstream: deepstreamIO.Client) {
-    const [host, port] = process.env.RETHINKDB_HOST.split(':');
     this.router = Router();
     this.jobRequestSchema = loadSchema('./schemas/JobRequest.schema.json');
     this.deepstream = deepstream;
@@ -31,9 +30,9 @@ export default class JobRoutes {
     this.k8Api = Axios.create({
       baseURL: `http://${process.env.K8_HOST}:${process.env.K8_PORT}`,
     });
-    this.jobQueue.on('log', (queueId: string, jobId: string) => {
-      console.log('Log event added to:', queueId, jobId);
-    });
+    // this.jobQueue.on('log', (queueId: string, jobId: string) => {
+    //   console.log('Log event added to:', queueId, jobId);
+    // });
   }
 
   /** Add this router to the parent router. */
@@ -50,7 +49,7 @@ export default class JobRoutes {
     this.router.delete('/:id', this.deleteJob.bind(this));
     this.router.get('/:id/logs', this.getJobLogs.bind(this));
     this.router.get('/', this.queryJobs.bind(this));
-    this.router.post('/', this.createJob.bind(this));
+    this.router.post('/', this.create.bind(this));
   }
 
   private getJob(req: Request, res: Response, next: NextFunction): void {
@@ -60,12 +59,11 @@ export default class JobRoutes {
   private patchJob(req: Request, res: Response, next: NextFunction): void {
     const jcr = req.body as JobChangeRequest;
     // console.info('patchJob:', req.params.id, jcr);
-    this.jobQueue.getJob(req.params.id).then(jobs => {
-      if (jobs.length === 0) {
-        res.status(404).json({ error: 'not-found' });
+    this.jobQueue.get(req.params.id).then((job: JobRecord) => {
+      if (job === null) {
+        res.status(404).json({ error: 'not-found', id: req.params.id });
         return;
       }
-      const job = jobs[0];
       if (jcr.cancelled) {
         this.cancelJob(job, res);
       }
@@ -75,26 +73,20 @@ export default class JobRoutes {
 
   private deleteJob(req: Request, res: Response, next: NextFunction): void {
     // console.info('Attempting to delete job:', req.params.id);
-    this.jobQueue.getJob(req.params.id).then(jobs => {
-      if (jobs.length === 0) {
-        res.status(404).json({ error: 'not-found' });
+    this.jobQueue.get(req.params.id).then((job: JobRecord) => {
+      if (job === null) {
+        res.status(404).json({ error: 'not-found', id: req.params.id });
         return;
       }
-      const job = jobs[0];
-      if (job.runState !== RunState.RUNNING || job.status === 'cancelled') {
-        if (job.runState === RunState.RUNNING) {
-          logger.warn(`Removing erroneously running job: ${job.id}.`);
-        }
-        this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
-          const promises = [];
-          promises.push(
-            this.jobQueue.r.table('JobQueue_Logs').filter({ job: req.params.id }).delete().run());
+      if (job.state !== RunState.RUNNING) {
+        this.taskQueue.find({ jobId: job.id }).then(tasks => {
+          const promises: Array<Promise<any>> = [];
+          promises.push(this.jobQueue.deleteLogs(req.params.id));
+          promises.push(this.taskQueue.deleteLogs(tasks.map(task => task.id)));
           for (const task of tasks) {
             if (task.k8Link) {
               logger.info(`Resource ${task.k8Link} removed.`);
               promises.push(this.k8Api.delete(task.k8Link));
-              promises.push(
-                this.taskQueue.r.table('TaskQueue_Logs').filter({ job: task.id }).delete().run());
             }
           }
 
@@ -104,8 +96,8 @@ export default class JobRoutes {
             return tasks;
           });
         }).then(tasks => {
-          return this.taskQueue.removeJob(tasks).then(removedTasks => {
-            return this.jobQueue.removeJob(req.params.id).then(removedJobs => {
+          return this.taskQueue.delete(tasks.map(t => t.id)).then(removedTasks => {
+            return this.jobQueue.delete(req.params.id).then(removedJobs => {
               logger.info(`Job ${job.id} removed.`);
               this.notifyJobChange(job, { jobsDeleted: [job.id] });
               res.end();
@@ -117,17 +109,14 @@ export default class JobRoutes {
         });
       } else {
         logger.error(`Attempted to remove job ${job.id} that was running.`);
-        logger.error(`Run state: ${RunState[job.runState]}.`);
+        logger.error(`Run state: ${RunState[job.state]}.`);
         res.status(400).json({ error: 'not-stopped' });
       }
     });
   }
 
   private queryJobs(req: Request, res: Response, next: NextFunction): void {
-    this.jobQueue.findJob({
-      user: req.query.user,
-      project: req.query.project,
-    }).then(jobList => {
+    this.jobQueue.find(this.pluck(req.query, 'user', 'project')).then(jobList => {
       res.json(jobList.filter(job => job.project !== undefined).map(JobRecord.serialize));
     }, error => {
       res.status(500).json({ error: 'internal', message: error.message });
@@ -135,7 +124,7 @@ export default class JobRoutes {
     });
   }
 
-  private createJob(req: Request, res: Response, next: NextFunction): void {
+  private create(req: Request, res: Response, next: NextFunction): void {
     const jr = req.body as JobRequest;
     if (!this.jobRequestSchema(jr)) {
       const errors = ajv.errorsText(this.jobRequestSchema.errors, { dataVar: 'JobRequest' });
@@ -143,7 +132,7 @@ export default class JobRoutes {
       res.status(400).json({ error: 'validation', message: errors });
       return;
     }
-    const job = this.jobQueue.createJob({
+    const job = this.jobQueue.create({
       user: jr.user,
       username: jr.username,
       project: jr.project,
@@ -152,7 +141,7 @@ export default class JobRoutes {
       recipe: jr.recipe,
       description: jr.description,
       submissionParams: jr.args || {},
-      runState: RunState.READY,
+      state: RunState.READY,
       waitingTasks: [],
       runningTasks: [],
       completedTasks: [],
@@ -177,7 +166,7 @@ export default class JobRoutes {
     if (!req.params.id) {
       res.status(404).json({ error: 'required-param', message: 'Invalid Job ID' });
     }
-    this.taskQueue.findJob({ jobId: req.params.id }).then(taskList => {
+    this.taskQueue.find(this.taskQuery(req.params.id, req.params.task)).then(taskList => {
       res.json(taskList.map(TaskRecord.serialize));
     }, error => {
       res.status(500).json({ error: 'internal', message: error.message });
@@ -190,8 +179,8 @@ export default class JobRoutes {
   }
 
   private getJobLogs(req: Request, res: Response, next: NextFunction): void {
-    this.jobQueue.r.table('JobQueue_Logs').filter({ job: req.params.id }).orderBy('date').run()
-    .then((entries: any[]) => {
+    // this.jobQueue.getLogs().orderBy('date').run()
+    this.jobQueue.getLogs(req.params.id).then(entries => {
       res.json(entries);
     }, (error: any) => {
       res.status(500).json({ error: 'internal', message: error.message });
@@ -200,17 +189,17 @@ export default class JobRoutes {
   }
 
   private getTaskLogs(req: Request, res: Response, next: NextFunction): void {
-    this.taskQueue.findJob({ jobId: req.params.id, taskId: req.params.task }).then(tasks => {
+    this.taskQueue.find(this.taskQuery(req.params.id, req.params.task)).then(tasks => {
       if (tasks.length === 1) {
-        this.taskQueue.r.table('TaskQueue_Logs').filter({ job: tasks[0].id }).orderBy('date').run()
-        .then((entries: any[]) => {
+        // this.taskQueue.getLogs().filter({ job: tasks[0].id }).orderBy('date').run()
+        this.taskQueue.getLogs(tasks[0].id).then(entries => {
           res.json(entries);
         }, (error: any) => {
           res.status(500).json({ error: 'internal', message: error.message });
           logger.error(`Error getting job logs:`, error);
         });
       } else {
-        logger.error(`Tasks ${req.params.id}:${req.params.task} not found.`, tasks.length);
+        logger.error(`Task ${req.params.id}:${req.params.task} not found.`, tasks.length);
         res.json([]);
       }
     }, error => {
@@ -220,16 +209,18 @@ export default class JobRoutes {
   }
 
   private cancelJob(job: JobRecord, res: Response) {
-    if (job.runState === RunState.RUNNING || job.runState === RunState.READY) {
-      logger.info(`Cancelling job ${job.id}, state [${RunState[job.runState]}], status:`,
-          job.status);
-      job.runState = RunState.CANCELLING;
-      job.setDateEnable(new Date());
-      job.update().then(() => {
-        this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
+    if (job.state === RunState.WAITING ||
+        job.state === RunState.RUNNING ||
+        job.state === RunState.READY) {
+      logger.info(`Cancelling job ${job.id}, state [${RunState[job.state]}].`);
+      this.jobQueue.getControl(job)
+          .update({ state: RunState.CANCELLING })
+          .reschedule(1).then(updated => {
+        this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(updated)] });
       });
     } else {
-      logger.error(`Attempted to cancel job ${job.id} that was not running, status:`, job.status);
+      logger.error(
+        `Attempted to cancel job ${job.id} that was not running, state [${RunState[job.state]}]:`);
       res.status(400).json({ error: 'not-running' });
     }
   }
@@ -240,5 +231,26 @@ export default class JobRoutes {
 
   private notifyTaskChange(jobId: string, payload: any) {
     this.deepstream.event.emit(`jobs.${jobId}`, payload);
+  }
+
+  private taskQuery(jobId?: string, taskId?: string): any {
+    const result: any = {};
+    if (jobId !== undefined) {
+      result.jobId = jobId;
+    }
+    if (taskId !== undefined) {
+      result.taskId = taskId;
+    }
+    return result;
+  }
+
+  private pluck<P extends { [key: string]: any }>(obj: P, ...keys: string[]): Partial<P> {
+    const result: Partial<P> = {};
+    for (const key of keys) {
+      if (obj.hasOwnProperty(key)) {
+        result[key] = obj[key];
+      }
+    }
+    return result;
   }
 }

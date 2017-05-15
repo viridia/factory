@@ -1,14 +1,9 @@
-import * as Queue from 'rethinkdb-job-queue';
+import * as queue from '../../../queue';
 import { Job, RunState } from '../api';
 
 /** Data structure of a Job as it is stored in the database. */
-export class JobRecord extends Queue.Job {
+export class JobRecord implements queue.Job {
   public static serialize(record: JobRecord): Job {
-    let runState = record.runState;
-    if (record.status === 'cancelled' &&
-        (runState === RunState.READY || runState === RunState.RUNNING)) {
-      runState = RunState.CANCELLED;
-    }
     return {
       id: record.id,
       user: record.user,
@@ -19,10 +14,10 @@ export class JobRecord extends Queue.Job {
       recipe: record.recipe,
       description: record.description,
       submissionParams: record.submissionParams,
-      state: runState,
-      createdAt: record.dateCreated,
-      startedAt: record.dateStarted,
-      endedAt: record.dateFinished,
+      state: record.state,
+      createdAt: record.createdAt,
+      startedAt: record.startedAt,
+      endedAt: record.endedAt,
       tasksTotal: (record.waitingTasks || []).length +
         (record.runningTasks || []).length +
         (record.cancelledTasks || []).length +
@@ -36,6 +31,15 @@ export class JobRecord extends Queue.Job {
     };
   }
 
+  // from queue.Job
+  public id: string;
+  public state: RunState;
+  public when: Date;
+  public startedAt?: Date;
+  public endedAt?: Date;
+
+  // New fields
+  public createdAt?: Date;
   public user: number;
   public username: string;
   public project: number;
@@ -44,7 +48,6 @@ export class JobRecord extends Queue.Job {
   public recipe: string;
   public description: string;
   public submissionParams: { [key: string]: any };
-  public runState: RunState;
   public waitingTasks: string[];  // Task ids whose dependencies haven't been met.
   public runningTasks: string[];  // Task ids that are running
   public completedTasks: string[]; // Task ids that are finished successfully
@@ -54,4 +57,5 @@ export class JobRecord extends Queue.Job {
   public workCompleted: number;   // Amount of work completed.
   public workFailed: number;      // Amount of work failed.
   public cancelRequested?: boolean;
+  public tasksCreated?: boolean;
 }

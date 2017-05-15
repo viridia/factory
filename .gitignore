@@ -1,3 +1,4 @@
 node_modules/
-client/src/common
+/client/src/api
+/sandbox
 *.pid

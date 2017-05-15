@@ -25,3 +25,11 @@ Logging:
   * unless *every* director instance is going to listen to logs
   * maybe that's not so bad.
 * topic: job.{jobId}.logs:
+
+Future:
+* Page that shows orphan workers.
+
+Intervals:
+Short: followUpIntervalMs
+Medium: checkIntervalMs
+Log: hibernateIntervalMs

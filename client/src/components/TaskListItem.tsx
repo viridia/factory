@@ -1,5 +1,5 @@
+import { RunState, Task } from 'api';
 import * as classnames from 'classnames';
-import { RunState, Task } from 'common/types/api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { ProgressBar } from 'react-bootstrap';
@@ -42,6 +42,8 @@ class TaskListItem extends React.Component<MappedProps, undefined> {
         return <div className="status cancelling">CANCELLING</div>;
       case RunState.CANCELLED:
         return <div className="status cancelled">CANCELLED</div>;
+      case RunState.FAILING:
+        return <div className="status failing">FAILED</div>;
       case RunState.FAILED:
         return <div className="status failed">FAILED</div>;
     }
@@ -51,13 +53,7 @@ class TaskListItem extends React.Component<MappedProps, undefined> {
     const { task, selected } = this.props;
     return (
       <section
-          className={classnames('task-row', {
-            running: task.state === RunState.RUNNING,
-            waiting: task.state === RunState.WAITING,
-            finished: task.state === RunState.COMPLETED,
-            cancelling: task.state === RunState.CANCELLING,
-            cancelled: task.state === RunState.CANCELLED,
-            failed: task.state === RunState.FAILED,
+          className={classnames('task-row', (RunState[task.state] || '').toLowerCase(), {
             selected,
           })}
           onClick={this.onClick}

@@ -1,5 +1,5 @@
+import { RunState, Task  } from 'api';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { RunState, Task  } from 'common/types/api';
 import * as Immutable from 'immutable';
 import { Dispatch } from 'redux';
 import { Action, handleActions } from 'redux-actions';

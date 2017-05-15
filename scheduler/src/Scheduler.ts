@@ -1,34 +1,34 @@
 import * as deepstream from 'deepstream.io-client-js';
-import * as Queue from 'rethinkdb-job-queue';
+import * as r from 'rethinkdb';
+import { connect, Connection, Db } from 'rethinkdb';
+import { ensureDbsExist, ensureTablesExist } from '../../common/db/util';
 import TaskSet from '../../common/recipes/TaskSet';
 import { JobChangeNotification, Recipe } from '../../common/types/api';
 import { RunState } from '../../common/types/api';
 import { JobRecord, TaskRecord } from '../../common/types/queue';
-import JobControl from './JobControl';
+import { JobControl, Queue } from '../../queue';
 import K8 from './K8';
 import { logger } from './logger';
+
+function quoteArg(arg: string): string {
+  if (/[\s\"]/.exec(arg)) {
+    return `"${arg}"`;
+  }
+  return arg;
+}
 
 export default class Scheduler {
   private jobQueue: Queue<JobRecord>;
   private taskQueue: Queue<TaskRecord>;
-  private r: any;
+  private conn: Connection;
   private db: any;
   private deepstream: deepstreamIO.Client;
   private k8: K8;
-  private jobLogTable: any;
-  private taskLogTable: any;
+  private ready: Promise<void>;
 
   private shortInterval: number = 100; // 100ms
   private mediumInterval: number = 3000; // 3 seconds
   private longInterval: number = 1000 * 60 * 60; // One hour
-
-  private jobError: (job: JobRecord | string, message: string, data?: object) => void;
-  private jobWarning: (job: JobRecord | string, message: string, data?: object) => void;
-  private jobInfo: (job: JobRecord | string, message: string, data?: object) => void;
-
-  private taskError: (job: TaskRecord, message: string, data?: object) => void;
-  private taskWarning: (job: TaskRecord, message: string, data?: object) => void;
-  private taskInfo: (job: TaskRecord, message: string, data?: object) => void;
 
   constructor() {
     this.deepstream = deepstream(
@@ -37,159 +37,104 @@ export default class Scheduler {
     logger.info(`Rethinkdb service host: ${process.env.RETHINKDB_PROXY_SERVICE_HOST}:` +
         `${process.env.RETHINKDB_PROXY_SERVICE_PORT}.`);
     logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.JOB_QUEUE_NAME}.`);
-    this.jobQueue = new Queue<JobRecord>({
+
+    this.ready = connect({
       host: process.env.RETHINKDB_PROXY_SERVICE_HOST,
       port: process.env.RETHINKDB_PROXY_SERVICE_PORT,
-      db: process.env.DB_NAME }, {
-      name: process.env.JOB_QUEUE_NAME,
-      masterInterval: interval,
+    }).then((conn: Connection) => {
+      this.conn = conn;
+      return ensureDbsExist(this.conn, [process.env.DB_NAME]);
+    }).then(() => {
+      this.jobQueue = new Queue<JobRecord>(this.conn, {
+        db: process.env.DB_NAME,
+        name: process.env.JOB_QUEUE_NAME,
+        // masterInterval: interval,
+      });
+      logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.TASK_QUEUE_NAME}.`);
+      this.taskQueue = new Queue<TaskRecord>(this.conn, {
+        db: process.env.DB_NAME,
+        name: process.env.TASK_QUEUE_NAME,
+        // masterInterval: interval,
+      });
+      return Promise.all([
+        this.jobQueue.ready,
+        this.taskQueue.ready,
+      ]);
+    }).then(() => {
+      this.db = r.db(process.env.DB_NAME);
+      this.k8 = new K8();
+      logger.level = 'debug';
+
+      this.emitJobUpdate = this.emitJobUpdate.bind(this);
+      this.emitTaskUpdate = this.emitTaskUpdate.bind(this);
+
+      // TODO: Move this to the 'run' method, assuming we can figure out how to stop it.
+      const startWatching = () => {
+        // Re-send the request if the stream ends.
+        logger.debug('Watching status changes.');
+        this.k8.watchJobs(this.handleK8Message.bind(this), startWatching);
+      };
+      startWatching();
+    }, error => {
+      logger.error(error);
     });
-    logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.TASK_QUEUE_NAME}.`);
-    this.taskQueue = new Queue<TaskRecord>({
-      host: process.env.RETHINKDB_PROXY_SERVICE_HOST,
-      port: process.env.RETHINKDB_PROXY_SERVICE_PORT,
-      db: process.env.DB_NAME }, {
-      name: process.env.TASK_QUEUE_NAME,
-      masterInterval: interval,
-    });
-    this.r = this.jobQueue.r;
-    this.db = this.r.db(process.env.DB_NAME);
-    this.jobLogTable = this.db.table(`${process.env.JOB_QUEUE_NAME}_Logs`);
-    this.taskLogTable = this.db.table(`${process.env.TASK_QUEUE_NAME}_Logs`);
-    this.k8 = new K8();
-    logger.level = 'debug';
-
-    this.ensureTablesExist([
-      `${process.env.JOB_QUEUE_NAME}_Logs`,
-      `${process.env.TASK_QUEUE_NAME}_Logs`,
-    ]);
-
-    this.jobError = this.addJobLog.bind(this, 'error');
-    this.jobWarning = this.addJobLog.bind(this, 'warning');
-    this.jobInfo = this.addJobLog.bind(this, 'info');
-
-    this.taskError = this.addTaskLog.bind(this, 'error');
-    this.taskWarning = this.addTaskLog.bind(this, 'warning');
-    this.taskInfo = this.addTaskLog.bind(this, 'info');
-
-    const startWatching = () => {
-      // Re-send the request if the stream ends.
-      logger.debug('Watching status changes.');
-      this.k8.watchJobs(this.handleK8Message.bind(this), startWatching);
-    };
-    startWatching();
   }
 
   public run() {
     // Job Queue processing loop.
-    this.jobQueue.process((job, next, onCancel) => {
-      const jobControl = new JobControl<JobRecord>(next);
-      logger.debug(`Processing Job: ${job.id} [${RunState[job.runState]}]`);
-      if (job.runState === RunState.READY) {
-        this.evalRecipe(job, jobControl);
-      } else if (job.runState === RunState.CANCELLING) {
-        this.cancelTasks(job, jobControl);
-      } else if (job.runState === RunState.RUNNING ||
-          job.runState === RunState.CANCELLED ||
-          job.runState === RunState.FAILED) {
-        this.updateJobStatus(job, jobControl);
-      }
-
-      onCancel(job, () => {
-        // TODO: Do we want to move the logic from the director to here?
-        logger.info(`Job ${job.id} onCancel() called.`, RunState[job.runState]);
-      });
-    });
-
-    // Task Queue processing loop.
-    this.taskQueue.process((task, next, onCancel) => {
-      const taskControl = new JobControl<TaskRecord>(next);
-      if (task.runState === RunState.READY) {
-        this.beginTask(task, taskControl);
-      } else if (task.runState === RunState.CANCELLING) {
-        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
-        this.releaseTaskResources(task).then(() => {
-          task.runState = RunState.CANCELLED;
-          task.update().then(() => {
-            taskControl.cancel('cancelled');
-          });
-        });
-      } else if (task.runState === RunState.RUNNING) {
-        this.updateTaskStatus(task, taskControl);
-      } else if (task.runState === RunState.FAILED) {
-        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
-        if (task.k8Link === null) {
-          logger.info(`Removing task: ${task.jobId}:${task.taskId} from queue.`);
-          taskControl.cancel('failed');
-        } else {
-          logger.warn(
-              `Task: ${task.jobId}:${task.taskId} has failed but still has resources attached.`);
-          logger.info(`Releasing task resources.`);
-          this.releaseTaskResources(task).then(() => {
-            taskControl.cancel('failed');
-          });
+    this.ready.then(() => {
+      this.jobQueue.process((job, jobControl) => {
+        if (job.state === RunState.RUNNING) {
+          if (!job.tasksCreated) {
+            this.evalRecipe(job, jobControl);
+          } else {
+            this.updateJobStatus(job, jobControl);
+          }
+        } else if (job.state === RunState.CANCELLING) {
+          this.cancelTasks(job, jobControl);
         }
-      } else if (task.runState === RunState.COMPLETED) {
-        logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
-        taskControl.complete();
-      } else {
-        // TODO: change this.
-        next(null, task);
-      }
+      });
 
-      onCancel(task, () => {
-        logger.info(`Job ${task.id} onCancel() called.`, RunState[task.runState]);
-        // this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+      // Task Queue processing loop.
+      this.taskQueue.process((task, taskControl) => {
+        if (task.state === RunState.RUNNING) {
+          if (!task.workStarted) {
+            this.beginTask(task, taskControl);
+          } else {
+            this.updateTaskStatus(task, taskControl);
+          }
+        } else if (task.state === RunState.CANCELLING) {
+          logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
+          this.releaseTaskResources(task, taskControl);
+          taskControl.cancel();
+        }
       });
     });
-  }
-
-  public addJobLog(level: string, job: string | JobRecord, message: string, data: object = {}) {
-    this.jobLogTable.insert({
-      job: typeof(job) === 'string' ? job : job.id,
-      level,
-      message,
-      data,
-      date: new Date(),
-    }).run();
-  }
-
-  public addTaskLog(level: string, task: TaskRecord, message: string, data: object = {}) {
-    this.taskLogTable.insert({
-      job: task.id,
-      level,
-      message,
-      data,
-      date: new Date(),
-    }).run();
   }
 
   private evalRecipe(job: JobRecord, jobControl: JobControl<JobRecord>): void {
-    this.jobInfo(job, `Executing recipe [${job.recipe}].`);
-    this.db.table('Recipes').get(job.recipe).run().then((recipe: any) => {
+    logger.info(`Job ${job.id} executing recipe [${job.recipe}].`);
+    jobControl.log.info(`Executing recipe [${job.recipe}].`);
+    jobControl.update({ tasksCreated: true });
+    this.db.table('Recipes').get(job.recipe).run(this.conn).then((recipe: any) => {
       if (!recipe) {
         logger.error(`Job ${job.id} failed, recipe ${job.recipe} not found.`);
-        this.jobError(job, `Recipe [${job.recipe}] not found.`);
-        job.runState = RunState.FAILED;
-        job.update();
-        jobControl.cancel('failed');
+        jobControl.log.error(`Recipe [${job.recipe}] not found.`);
+        jobControl.fail().then(this.emitJobUpdate);
       } else {
         // Create tasks for this job
         // Note that the following method modifies the job object.
         this.createRecipeTasks(job, jobControl, recipe).then(() => {
-          this.jobInfo(job, `Created tasks from recipe [${job.recipe}].`);
-          job.runState = RunState.RUNNING;
+          jobControl.log.info(`Created tasks from recipe [${job.recipe}].`);
           // Tasks have been added, but are in the 'ready' state; reschedule the job immediately
           // so that we can start running them.
-          jobControl.reschedule(job, new Date(Date.now() + 100));
-          this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
+          jobControl.setState(RunState.RUNNING)
+            .reschedule(this.shortInterval)
+            .then(this.emitJobUpdate);
         }, error => {
           logger.error(`Job ${job.id} failed creating tasks: ${error.message}`);
-          this.jobError(job, `Failed to create recipe tasks: $(error.message}`);
-          job.runState = RunState.FAILED;
-          job.update();
-          jobControl.fatal(error);
-          this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
+          jobControl.log.error(`Failed to create recipe tasks: $(error.message}`);
+          jobControl.fail(error).then(this.emitJobUpdate);
         });
       }
     });
@@ -208,19 +153,15 @@ export default class Scheduler {
     const eternity = new Date(Date.now() + this.longInterval);
     for (const task of taskSet.taskList) {
       logger.info(`Creating new task: ${job.id}:${task.taskId}.`);
-      const taskRecord = this.taskQueue.createJob({
+      const taskRecord = this.taskQueue.create({
         ...task,
         jobId: job.id,
+        state: task.depends.length === 0 ? RunState.READY : RunState.WAITING,
       });
       readyTasks.push(taskRecord);
-      if (taskRecord.depends.length === 0) {
-        taskRecord.runState = RunState.READY;
+      if (taskRecord.state === RunState.READY) {
         job.runningTasks.push(task.taskId);
       } else {
-        // For tasks that are not ready, set a start time far in the future. We'll modify
-        // this when the tasks become ready.
-        taskRecord.runState = RunState.WAITING;
-        taskRecord.setDateEnable(eternity);
         job.waitingTasks.push(task.taskId);
       }
     }
@@ -230,27 +171,30 @@ export default class Scheduler {
   }
 
   private cancelTasks(job: JobRecord, jobControl: JobControl<JobRecord>) {
-    this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
+    this.taskQueue.find({ jobId: job.id }).then(tasks => {
+      const promises = [];
+      jobControl.log.info('Cancelling tasks.');
       for (const task of tasks) {
-        if (task.runState !== RunState.CANCELLED) {
-          task.runState = RunState.CANCELLING;
-          task.update();
+        if (task.state !== RunState.CANCELLED && task.state !== RunState.FAILED) {
+          promises.push(this.taskQueue.getControl(task).setState(RunState.CANCELLING).end());
         }
       }
-      // TODO: Actually should wait until all the tasks have finished cancelling.
-      this.jobInfo(job, `Cancelling tasks.`);
-      job.runState = RunState.CANCELLED;
-      job.update();
-      this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
-      this.notifyTaskChange(job.id, { tasksUpdated: tasks.map(TaskRecord.serialize) });
-      this.jobQueue.cancelJob(job);
-      jobControl.complete('cancelled');
+      // Wait until all tasks are done.
+      return Promise.all(promises).then(() => {
+        // Cancel the job.
+        return jobControl.cancel()
+          .then(this.emitJobUpdate)
+          .then(() => {
+            // Notify all the tasks as a single update.
+            this.notifyTaskChange(job.id, { tasksUpdated: tasks.map(TaskRecord.serialize) });
+          });
+      });
     });
   }
 
   private updateJobStatus(job: JobRecord, jobControl: JobControl<JobRecord>) {
+    logger.debug(`Updating job status: ${job.id} [${RunState[job.state]}]`);
     const later = new Date(Date.now() + this.longInterval);
-    const soon = new Date(Date.now() + this.shortInterval); // 100 ms
     let workTotal = 0;
     let workCompleted = 0;
     let workFailed = 0;
@@ -261,7 +205,7 @@ export default class Scheduler {
     const failedTasks: string[] = [];
     const taskIdMap: { [key: string]: TaskRecord } = {};
     const taskChangedMap: { [key: string]: TaskRecord } = {};
-    return this.taskQueue.findJob({ jobId: job.id }).then(tasks => {
+    return this.taskQueue.find({ jobId: job.id }).then(tasks => {
       // Build a map of all tasks by task id.
       for (const task of tasks) {
         taskIdMap[task.taskId] = task;
@@ -281,43 +225,39 @@ export default class Scheduler {
         // For this task, summarize the state of its dependencies
         for (const depId of task.depends) {
           const dep = taskIdMap[depId];
-          depCounts[dep ? dep.runState : RunState.FAILED] += 1;
+          depCounts[dep ? dep.state : RunState.FAILED] += 1;
         }
-        switch (task.runState) {
+        const taskControl = this.taskQueue.getControl(task);
+        switch (task.state) {
           case RunState.WAITING:
             if (depCounts[RunState.CANCELLING] > 0 || depCounts[RunState.CANCELLED] > 0) {
               // If any of our dependenies are cancelled, then this is too.
               logger.warn(`Task ${task.jobId}:${task.taskId} cancelled because ` +
                   'it depends on a task which was also cancelled.');
-              task.runState = RunState.CANCELLED;
-              this.taskWarning(task, 'Task cancelled because a task it depends on was cancelled.');
-              this.jobWarning(job,
+              taskControl.log.warning('Task cancelled because a task it depends on was cancelled.');
+              jobControl.log.warning(
                   `Task '${task.taskId}' cancelled because a task it depends on was cancelled.`);
-              task.update();
-              this.taskQueue.cancelJob(task);
+              taskControl.cancel();
               cancelledTasks.push(task.id);
               taskChangedMap[task.taskId] = task;
             } else if (depCounts[RunState.FAILED] > 0) {
               // If any of our dependenies are failed, then this task is too.
               logger.warn(`Task ${task.jobId}:${task.taskId} failed`,
                   'because it depends on a task which also failed.');
-              this.taskWarning(task, 'Task failed because a task it depends on failed.');
-              this.jobWarning(job,
+              taskControl.log.warning('Task failed because a task it depends on failed.');
+              jobControl.log.warning(
                   `Task '${task.taskId}' failed because a task it depends on failed.`);
               // console.log('dep counts:', depCounts);
-              task.runState = RunState.FAILED;
-              this.taskQueue.cancelJob(task);
-              task.update();
+              taskControl.fail();
               failedTasks.push(task.id);
               workFailed += task.weight;
               taskChangedMap[task.taskId] = task;
             } else if (depCounts[RunState.COMPLETED] === task.depends.length) {
               // All dependencies completed.
-              task.runState = RunState.READY;
-              this.taskInfo(task, 'Task dependencies satisfied; task is ready to run.');
-              this.jobInfo(job, `Task '${task.taskId}' dependencies satisfied, task is ready.`);
-              task.setDateEnable(soon);
-              task.update();
+              logger.info(`Task ${task.jobId}:${task.taskId} dependencies satsfied.`);
+              taskControl.log.info('Task dependencies satisfied; task is ready to run.');
+              jobControl.log.info(`Task '${task.taskId}' dependencies satisfied, task is ready.`);
+              taskControl.setState(RunState.READY).reschedule(this.shortInterval);
               runningTasks.push(task.id);
               taskChangedMap[task.taskId] = task;
             } else {
@@ -330,6 +270,7 @@ export default class Scheduler {
             runningTasks.push(task.id);
             break;
           case RunState.CANCELLING:
+          // case RunState.FAILING:
             // Tasks which are in the process of cancelling are treated as running for purposes
             // of determining whether the job is finished or not.
             runningTasks.push(task.id);
@@ -347,92 +288,80 @@ export default class Scheduler {
             break;
         }
       }
-      job.workTotal = workTotal;
-      job.workCompleted = workCompleted;
-      job.workFailed = workFailed;
-      job.waitingTasks = waitingTasks;
-      job.runningTasks = runningTasks;
-      job.cancelledTasks = cancelledTasks;
-      job.completedTasks = completedTasks;
-      job.failedTasks = failedTasks;
-      if (job.failedTasks.length > 0) {
+
+      jobControl.update({
+        workTotal,
+        workCompleted,
+        workFailed,
+        waitingTasks,
+        runningTasks,
+        cancelledTasks,
+        completedTasks,
+        failedTasks,
+      });
+      if (job.state === RunState.FAILED || job.state === RunState.CANCELLED) {
+        // Don't change state again, just commit the changes we made.
+        jobControl.end();
+      } else if (job.failedTasks.length > 0) {
         if (job.waitingTasks.length === 0 && job.runningTasks.length === 0) {
           logger.warn(`Job ${job.id} has ${failedTasks.length} failing tasks`,
               'and no running tasks.');
           logger.error(`Setting job ${job.id} state to [FAILED].`);
-          this.jobWarning(job, `Job has ${failedTasks.length} failing tasks and no running tasks.`);
-          this.jobWarning(job, `Setting job status to failed.`);
-          job.runState = RunState.FAILED;
-          job.update().then(() => {
-            jobControl.cancel('failed');
-          });
+          jobControl.log.warning(
+              `Job has ${failedTasks.length} failing tasks and no running tasks.`);
+          jobControl.fail();
         } else {
           logger.info(`Job ${job.id} has ${failedTasks.length} failing tasks `,
               `and ${waitingTasks.length + runningTasks.length} running tasks.`);
           logger.info(`Waiting for ${job.id} tasks to finish.`);
-          this.jobInfo(job, 'Waiting for tasks to finish...');
-          jobControl.reschedule(job, new Date(Date.now() + 1000 * 10));
+          jobControl.log.info('Waiting for tasks to finish...');
+          jobControl.reschedule(this.mediumInterval);
         }
       } else if (job.cancelledTasks.length > 0) {
         if (job.waitingTasks.length === 0 && job.runningTasks.length === 0) {
-          this.jobInfo(job, 'All tasks complete, setting status to cancelled.');
-          job.runState = RunState.CANCELLED;
-          job.update().then(() => {
-            jobControl.cancel('cancelled');
-          });
+          jobControl.log.info('All tasks complete, setting status to cancelled.');
+          jobControl.cancel();
         } else {
-          jobControl.reschedule(job, new Date(Date.now() + 1000 * 10));
+          jobControl.reschedule(this.mediumInterval);
         }
       } else if (job.runningTasks.length === 0 && job.waitingTasks.length === 0) {
-        this.jobInfo(job, 'Job completed.');
-        job.runState = RunState.COMPLETED;
-        job.update().then(() => {
-          jobControl.complete();
-        });
+        jobControl.log.info('Job completed.');
+        jobControl.finish();
       } else {
         // Still running
-        jobControl.reschedule(job, later);
+        jobControl.reschedule(this.longInterval);
       }
-      this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
+      this.emitJobUpdate(job);
       const tasksChanged = Object.getOwnPropertyNames(taskChangedMap);
+      logger.verbose(`${tasksChanged.length} tasks updated, sending notification.`, taskChangedMap);
       if (tasksChanged.length > 0) {
         this.notifyTaskChange(job.id, {
           tasksUpdated: tasksChanged.map(id => TaskRecord.serialize(taskChangedMap[id])),
         });
       }
     }, error => {
-      job.runState = RunState.FAILED;
-      job.update();
-      jobControl.fatal(error);
+      jobControl.fail(error).then(this.emitJobUpdate);
     });
   }
 
   private beginTask(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
+    taskControl.update({ workStarted: true });
     if (task.image) {
-      this.k8.createJob(task).then(resp => {
+      this.k8.create(task).then(resp => {
         logger.info(`Task ${task.jobId}:${task.taskId} worker started.`);
-        this.taskInfo(task, `Task worker started.`);
-        this.jobInfo(task.jobId, `Task '${task.taskId}' worker started.`);
+        taskControl.log.info('Task worker started.');
+        taskControl.log.info(`Image: [${task.image}]`);
+        taskControl.log.info(`Command arguments: [${task.args.map(quoteArg).join(' ')}]`);
+        this.jobQueue.addLog(task.jobId, 'info', `Task [${task.taskId}] worker started.`);
         // console.log('k8 initial status:', resp.data.status);
-        task.runState = RunState.RUNNING;
-        task.k8Link = resp.data.metadata.selfLink;
-        task.startedAt = new Date(resp.data.metadata.creationTimestamp);
-        taskControl.reschedule(task, new Date(Date.now() + this.mediumInterval));
-        this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-        this.jobQueue.findJob(task.jobId).then(jobs => {
-          const nextTime = new Date(Date.now() + this.mediumInterval);
-          for (const job of jobs) {
-            if (job.runState === RunState.RUNNING && job.dateEnable > nextTime) {
-              job.setDateEnable(nextTime);
-              job.update();
-            }
-          }
-        });
+        taskControl.setState(RunState.RUNNING).update({
+          k8Link: resp.data.metadata.selfLink,
+        }).reschedule(this.mediumInterval).then(this.emitTaskUpdate);
+        this.jobQueue.wake(task.jobId, 1000);
       }, error => {
-        task.runState = RunState.FAILED;
         if (error.response && error.response.data) {
-          this.taskError(task, error.response.data.message);
-          this.jobError(task.jobId, `Task '${task.taskId}' failed.`);
+          taskControl.log.error(error.response.data.message);
+          this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
           logger.error(`Task ${task.jobId}:${task.taskId} failed to run K8 image:`,
               error.response.status,
               error.response.data.message);
@@ -440,92 +369,60 @@ export default class Scheduler {
           logger.error(`Task ${task.jobId}:${task.taskId} failed to run K8 image.`);
           // TODO: Handle other kinds of errors.
         }
-        task.update().then(() => {
-          taskControl.fatal(error);
-          this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-        });
+        taskControl.fail(error).then(this.emitTaskUpdate);
+        this.jobQueue.wake(task.jobId, this.shortInterval);
       });
     } else {
       // console.log(task);
       // Task has no image, must have some other action specified.
-      task.runState = RunState.FAILED;
-      task.update().then(() => {
-        taskControl.cancel('no-actions.');
-        this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-        this.taskError(task, 'Task has no action specified.');
-        this.jobError(task.jobId, `Task '${task.taskId}' failed.`);
-        logger.error(`Task ${task.jobId}:${task.taskId} is missing an action.`);
-      });
+      logger.error(`Task ${task.jobId}:${task.taskId} is missing an action.`);
+      taskControl.log.error('Task has no action specified.');
+      this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
+      taskControl.fail().then(this.emitTaskUpdate);
+      this.jobQueue.wake(task.jobId, this.shortInterval);
     }
   }
 
   private updateTaskStatus(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
     logger.debug(
-        `Updating status for Task: ${task.jobId}:${task.taskId} [${RunState[task.runState]}].`);
+        `Updating status for Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
     if (task.k8Link) {
       this.k8.getJobStatus(task).then(resp => {
         if (resp.status.succeeded) {
-          logger.info(`Task ${task.jobId}:${task.taskId} succeeded.`);
-          this.taskInfo(task, 'Task succeeded.');
-          this.releaseTaskResources(task).then(() => {
-            if (task.runState !== RunState.COMPLETED) {
-              task.runState = RunState.COMPLETED;
-              task.dateFinished = new Date(resp.status.completionTime);
-              task.update().then(() => {
-                taskControl.complete();
-                this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-                return this.wakeJob(task.jobId);
-              });
-            }
-          });
+          this.onWorkerSucceeded(task, taskControl);
         } else if (resp.status.failed > 0) {
-          // Task failed.
-          logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.runState]}] failed.`);
-          this.taskError(task, 'Kubernetes task failed.');
-          task.runState = RunState.FAILED;
-          task.dateFinished = new Date();
-          task.update().then(() => {
-            taskControl.cancel('failed');
-            this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-            return this.wakeJob(task.jobId);
-          });
+          this.onWorkerFailed(task, taskControl);
         } else {
           this.k8.getPodStatus(resp.metadata.name).then(pod => {
             if (this.isPodNeverPulled(pod)) {
               logger.error(`Task ${task.jobId}:${task.taskId} container image never pulled.`);
-              this.taskError(task, `Container image ${task.image} never pulled.`);
-              if (task.runState !== RunState.FAILED) {
-                task.runState = RunState.FAILED;
-                task.dateFinished = new Date();
-                task.update().then(() => {
-                  taskControl.cancel('failed');
-                  this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-                  return this.wakeJob(task.jobId);
-                });
-              }
-              // this.setTaskStatusChange(task, RunState.FAILED);
+              this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
+              taskControl.log.error(`Container image ${task.image} never pulled.`);
+              this.releaseTaskResources(task, taskControl);
+              taskControl.fail().then(() => {
+                this.emitTaskUpdate(task);
+                return this.jobQueue.wake(task.jobId, this.shortInterval);
+              });
               return;
             }
           });
-          // this.k8.getPodStatus(task.jobId, task.taskId);
           // console.log('updateTaskStatus/K8 job status:', resp.status);
-          taskControl.reschedule(task, new Date(Date.now() + this.longInterval));
+          // More work to do, wait...
+          taskControl.reschedule(this.longInterval);
         }
       }, error => {
         logger.info(`Task ${task.jobId}:${task.taskId} failed to query K8 status.`);
-        this.taskError(task, `Failed to query Kubernetes task status: ${error.message}`);
+        taskControl.log.error(`Failed to query worker task status: ${error.message}`);
         // logger.error('Failed to query K8 job status:', error.response);
-        taskControl.reschedule(task, new Date(Date.now() + this.mediumInterval));
+        // TODO: If this fails several times, go to failing.
+        taskControl.reschedule(this.mediumInterval);
       });
     } else {
       logger.warn(`Task ${task.jobId}:${task.taskId} is running but has no action specified.`);
-      task.runState = RunState.FAILED;
-      task.update().then(() => {
-        logger.error(`Setting task ${task.jobId}:${task.taskId} status to [FAILED].`);
-        this.taskError(task, 'Task has no action specified. Cancelling.');
-        taskControl.cancel('no-actions.');
+      taskControl.log.error('Task has no action specified. Cancelling.');
+      taskControl.fail().then(() => {
         this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-        return this.wakeJob(task.jobId);
+        return this.jobQueue.wake(task.jobId, this.shortInterval);
       });
     }
   }
@@ -535,45 +432,48 @@ export default class Scheduler {
     const jobMessage = message.object;
     const jobId = jobMessage.metadata.labels['factory.job'];
     const taskId = jobMessage.metadata.labels['factory.task'];
-    this.taskQueue.findJob({ jobId, taskId }).then((tasks: TaskRecord[]) => {
+    this.taskQueue.find({ jobId, taskId }).then((tasks: TaskRecord[]) => {
       if (tasks.length === 1) {
         const task = tasks[0];
-        if (task.runState === RunState.FAILED ||
-            task.runState === RunState.CANCELLED ||
-            task.runState === RunState.COMPLETED) {
+        const taskControl = this.taskQueue.getControl(task);
+        if (task.state === RunState.FAILED ||
+            task.state === RunState.CANCELLED ||
+            task.state === RunState.COMPLETED) {
           return;
-        } else if (message.type === 'DELETED') {
+        }
+
+        if (message.type === 'DELETED') {
           // Task was deleted, may have been successful or not.
-          logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] signaled deleted.`);
-          this.taskError(task, 'Worker task signaled deleted.');
-          task.dateFinished = new Date(jobMessage.status.completionTime);
-          this.setTaskRunState(task,
-              task.runState === RunState.CANCELLING ? RunState.CANCELLED : RunState.COMPLETED);
+          logger.info(`Task ${jobId}:${taskId} [${RunState[task.state]}] signaled deleted.`);
+          taskControl.log.error('Worker task signaled deleted.');
+          taskControl.update({ k8Link: null });
+          if (task.state === RunState.CANCELLING) {
+            taskControl.cancel();
+          } else {
+            taskControl.finish();
+          }
         } else if (jobMessage.status.failed > 0) {
-          // Task failed.
-          logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] signaled failed.`);
-          this.taskError(task, 'Worker task signaled failed.');
-          task.dateFinished = new Date();
-          this.setTaskRunState(task, RunState.FAILED);
+          this.onWorkerFailed(task, taskControl);
+          console.log(jobMessage);
         } else if (this.isComplete(jobMessage)) {
-          // Task completed successfully
-          logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] signaled completed.`);
-          this.taskInfo(task, 'Task completed.');
-          task.dateFinished = new Date(jobMessage.status.completionTime);
-          this.setTaskRunState(task, RunState.COMPLETED);
+          this.onWorkerSucceeded(task, taskControl);
         } else {
           // console.log('job message:', JSON.stringify(jobMessage, null, 2));
-          logger.debug(`Querying Pod state for task ${jobId}:${taskId}.`);
+          // logger.debug(`Querying Pod state for task ${jobId}:${taskId}.`);
           this.k8.getPodStatus(jobMessage.metadata.name).then(pod => {
             // console.log('pod status:', JSON.stringify(pod, null, 2));
             if (this.isPodNeverPulled(pod)) {
               logger.error(`Task ${jobId}:${taskId} container image never pulled.`);
-              this.taskError(task, `Container image ${task.image} never pulled.`);
-              task.dateFinished = new Date();
-              this.setTaskRunState(task, RunState.FAILED);
+              taskControl.log.error(`Container image ${task.image} never pulled.`);
+              this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
+              this.releaseTaskResources(task, taskControl);
+              taskControl.fail().then(() => {
+                this.emitTaskUpdate(task);
+                return this.jobQueue.wake(task.jobId, this.shortInterval);
+              });
             } else if (jobMessage.status) {
               // What is it trying to tell us?
-              // logger.info(`Task ${jobId}:${taskId} [${RunState[task.runState]}] status change:`)
+              // logger.info(`Task ${jobId}:${taskId} [${RunState[task.state]}] status change:`)
               // console.info(jobMessage);
             }
           });
@@ -585,20 +485,25 @@ export default class Scheduler {
     });
   }
 
-  private setTaskRunState(task: TaskRecord, rs: RunState) {
-    logger.verbose(`Task ${task.jobId}:${task.taskId} state changed [${RunState[rs]}].`);
-    if (task.runState !== rs) {
-      task.runState = rs;
-      task.setDateEnable(new Date(Date.now() + this.shortInterval));
-      this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
-      return task.update().then(() => {
-        return this.wakeJob(task.jobId);
-      }, error => {
-        console.log(error);
-      });
-    } else {
-      return Promise.resolve();
-    }
+  private onWorkerSucceeded(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
+    logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] completed.`);
+    this.jobQueue.addLog(task.jobId, 'info', `Task [${task.taskId}] completed.`);
+    this.releaseTaskResources(task, taskControl);
+    return taskControl.finish().then(() => {
+      this.emitTaskUpdate(task);
+      return this.jobQueue.wake(task.jobId, this.shortInterval);
+    });
+  }
+
+  private onWorkerFailed(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
+    logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] failed.`);
+    this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
+    taskControl.log.error('Worker task failed.');
+    this.releaseTaskResources(task, taskControl);
+    return taskControl.fail().then(() => {
+      this.emitTaskUpdate(task);
+      return this.jobQueue.wake(task.jobId, this.shortInterval);
+    });
   }
 
   private isComplete(jobMessage: any) {
@@ -623,34 +528,26 @@ export default class Scheduler {
     return false;
   }
 
-  private wakeJob(jobId: string) {
-    return this.jobQueue.getJob(jobId).then(jobs => {
-      if (jobs.length === 1) {
-        const job = jobs[0];
-        const nextTime = new Date(Date.now() + this.shortInterval);
-        // if (job.dateEnable > nextTime) {
-        job.setDateEnable(nextTime);
-        return job.update();
-        // } else {
-        //   return Promise.resolve(job);
-        // }
-      } else {
-        logger.error(`Attempt to wake non-existent job ${jobId}.`, jobs);
-      }
-    });
-  }
-
-  private releaseTaskResources(task: TaskRecord) {
+  private releaseTaskResources(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
     if (task.k8Link) {
       return this.k8.deleteJob(task).then(resp => {
-        task.k8Link = null;
+        taskControl.update({ k8Link: null });
       }, error => {
-        logger.error('K8 cancel failed:', error.response);
-        this.taskError(task, 'Failed to release worker resources.');
-        task.k8Link = null; // Consider it deleted anyway
+        logger.error('K8 cancel failed:', error);
+        taskControl.log.error('Failed to release worker resources.');
+        taskControl.update({ k8Link: null }); // Consider it deleted anyway
       });
     }
-    return Promise.resolve();
+  }
+
+  private emitJobUpdate(job: JobRecord): JobRecord {
+    this.notifyJobChange(job, { jobsUpdated: [JobRecord.serialize(job)] });
+    return job;
+  }
+
+  private emitTaskUpdate(task: TaskRecord): TaskRecord {
+    this.notifyTaskChange(task.jobId, { tasksUpdated: [TaskRecord.serialize(task)] });
+    return task;
   }
 
   private notifyJobChange(job: JobRecord, payload: JobChangeNotification) {

@@ -1,4 +1,4 @@
-import { Task } from 'common/types/api';
+import { Task } from 'api';
 import * as Immutable from 'immutable';
 
 /** Data structure representing the list of jobs queried from the director server. */

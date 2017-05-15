@@ -22,7 +22,7 @@ export default class K8 {
     });
   }
 
-  public createJob(task: TaskRecord) {
+  public create(task: TaskRecord) {
     const name = `factory-${task.taskId}-${task.jobId}`;
     return this.axios.post(JOBS_PATH, {
       kind: 'Job',
@@ -43,18 +43,25 @@ export default class K8 {
             },
           },
           spec: {
+            restartPolicy: 'Never',
             containers: [{
               name: 'renderer',
               image: task.image,
               workingDir: task.workdir,
               // command: '',
               args: task.args,
-              imagePullPolicy: 'Never',
+              imagePullPolicy: 'IfNotPresent',
               restartPolicy: 'Never',
-              volumeMounts: [{ name: 'sandbox', mountPath: '/usr/nimble/sandbox' }],
+              volumeMounts: [{
+                name: 'sandbox',
+                mountPath: '/usr/nimble/sandbox',
+              }],
             }],
-            volumes: [{ name: 'sandbox', hostDir: '/usr/nimble/sandbox' }],
-            restartPolicy: 'Never',
+            volumes: [{
+              name: 'sandbox',
+              // hostPath: { path: '/usr/nimble/sandbox' },
+              hostPath: { path: '/mount-9p/sandbox' },
+            }],
           },
         },
       },
