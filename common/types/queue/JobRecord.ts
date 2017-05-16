@@ -58,4 +58,5 @@ export class JobRecord implements queue.Job {
   public workFailed: number;      // Amount of work failed.
   public cancelRequested?: boolean;
   public tasksCreated?: boolean;
+  public concurrencyLimit: number;
 }

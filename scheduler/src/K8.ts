@@ -5,6 +5,7 @@ import { logger } from './logger';
 
 const JOBS_PATH = '/apis/batch/v1/namespaces/default/jobs';
 const WATCH_PATH = '/apis/batch/v1/watch/namespaces/default/jobs';
+const PODS_PATH = '/api/v1/namespaces/default/pods';
 
 /** Class to talk to Kubernetes. */
 export default class K8 {
@@ -38,8 +39,10 @@ export default class K8 {
           metadata: {
             name,
             labels: {
-              group: 'factory',
-              component: 'worker',
+              'factory.job': task.jobId,
+              'factory.task': task.taskId,
+              'group': 'factory',
+              'component': 'worker',
             },
           },
           spec: {
@@ -69,6 +72,24 @@ export default class K8 {
       // console.log(resp);
       return resp;
       // TODO: normalize errors.
+    });
+  }
+
+  public deleteJobs(jobId: string) {
+    // TODO: normalize errors.
+    return this.axios.delete('/apis/batch/v1/namespaces/default/jobs', {
+      params: {
+        labelSelector: { 'factory.job': jobId },
+      },
+    });
+  }
+
+  public deletePods(jobId: string) {
+    // TODO: normalize errors.
+    return this.axios.delete('/apis/batch/v1/namespaces/default/jobs', {
+      params: {
+        labelSelector: { 'factory.job': jobId },
+      },
     });
   }
 

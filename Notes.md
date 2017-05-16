@@ -2,22 +2,14 @@
 
 ## Components
 
-* Worker
-  * kube api
-  * service
-  * deployment
-* Logger
-  * rethinkdb
-  * filter
-
 * Next steps:
   * set working directory in container?
   * real-time logging.
+  * concurrency limits.
+  * don't release k8s jobs so eagerly
 
 Future:
-* Try running the queue on os x.
 * Improve JSON schema error messages.
-* Logging
 * Number tasks sequentially
 * Number log lines sequentially
 
@@ -31,6 +23,7 @@ Future:
 * Page that shows orphan workers.
 * Maybe don't delete workers quite so eagerly.
 * Use the 'status' endpoint for watching worker status?
+* recipe language: all tasks within a step? pattern?
 
 Intervals:
 Short: followUpIntervalMs

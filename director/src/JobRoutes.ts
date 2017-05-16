@@ -79,22 +79,38 @@ export default class JobRoutes {
         return;
       }
       if (job.state !== RunState.RUNNING) {
+        const promises: Array<Promise<any>> = [];
+        // Delete all K8 jobs with that are labeled with this job's id.
+        promises.push(this.k8Api.delete('/apis/batch/v1/namespaces/default/jobs', {
+          params: {
+            labelSelector: `factory.job=${job.id}`,
+          },
+        }).catch(error => {
+          logger.error('Error deleting K8 jobs:', error.message || error, error.response.data);
+        }));
+
+        // Delete all K8 ppods with that are labeled with this job's id.
+        promises.push(this.k8Api.delete('/api/v1/namespaces/default/pods', {
+          params: {
+            labelSelector: `factory.job=${job.id}`,
+          },
+        }).catch(error => {
+          logger.error('Error deleting K8 pods:', error.message || error, error.response.data);
+        }));
+
+        // Delete job logs
+        promises.push(this.jobQueue.deleteLogs(job.id).catch(error => {
+          logger.info('Error deleting job logs:', error.message || error);
+        }));
+
+        // Delete all task logs
         this.taskQueue.find({ jobId: job.id }).then(tasks => {
-          const promises: Array<Promise<any>> = [];
-          promises.push(this.jobQueue.deleteLogs(req.params.id));
-          promises.push(this.taskQueue.deleteLogs(tasks.map(task => task.id)));
-          for (const task of tasks) {
-            if (task.k8Link) {
-              logger.info(`Resource ${task.k8Link} removed.`);
-              promises.push(this.k8Api.delete(task.k8Link));
-            }
-          }
+          promises.push(this.taskQueue.deleteLogs(tasks.map(task => task.id)).catch(error => {
+            logger.info('Error deleting task logs:', error.message || error);
+          }));
 
           // Wait for deletions, return tasks either way.
-          return Promise.all(promises).then(() => tasks, () => {
-            logger.info('job resource deletion or log deletion failed.');
-            return tasks;
-          });
+          return Promise.all(promises).then(() => tasks);
         }).then(tasks => {
           return this.taskQueue.delete(tasks.map(t => t.id)).then(removedTasks => {
             return this.jobQueue.delete(req.params.id).then(removedJobs => {

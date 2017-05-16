@@ -106,7 +106,6 @@ export default class Scheduler {
           }
         } else if (task.state === RunState.CANCELLING) {
           logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
-          this.releaseTaskResources(task, taskControl);
           taskControl.cancel();
         }
       });
@@ -116,7 +115,7 @@ export default class Scheduler {
   private evalRecipe(job: JobRecord, jobControl: JobControl<JobRecord>): void {
     logger.info(`Job ${job.id} executing recipe [${job.recipe}].`);
     jobControl.log.info(`Executing recipe [${job.recipe}].`);
-    jobControl.update({ tasksCreated: true });
+    jobControl.update({ tasksCreated: true, concurrencyLimit: 5 });
     this.db.table('Recipes').get(job.recipe).run(this.conn).then((recipe: any) => {
       if (!recipe) {
         logger.error(`Job ${job.id} failed, recipe ${job.recipe} not found.`);
@@ -130,7 +129,10 @@ export default class Scheduler {
           // Tasks have been added, but are in the 'ready' state; reschedule the job immediately
           // so that we can start running them.
           jobControl.setState(RunState.RUNNING)
-            .reschedule(this.shortInterval)
+            .update({
+              runningTasks: job.runningTasks,
+              waitingTasks: job.waitingTasks,
+            }).reschedule(this.shortInterval)
             .then(this.emitJobUpdate);
         }, error => {
           logger.error(`Job ${job.id} failed creating tasks: ${error.message}`);
@@ -152,12 +154,15 @@ export default class Scheduler {
     }
     const readyTasks = [];
     const eternity = new Date(Date.now() + this.longInterval);
+    let index = 0;
     for (const task of taskSet.taskList) {
       logger.info(`Creating new task: ${job.id}:${task.taskId}.`);
       const taskRecord = this.taskQueue.create({
         ...task,
         jobId: job.id,
-        state: task.depends.length === 0 ? RunState.READY : RunState.WAITING,
+        index: index++,
+        state: task.depends.length === 0 && job.runningTasks.length < job.concurrencyLimit ?
+            RunState.READY : RunState.WAITING,
       });
       readyTasks.push(taskRecord);
       if (taskRecord.state === RunState.READY) {
@@ -249,7 +254,8 @@ export default class Scheduler {
               failedTasks.push(task.id);
               workFailed += task.weight;
               taskChangedMap[task.taskId] = task;
-            } else if (depCounts[RunState.COMPLETED] === task.depends.length) {
+            } else if (depCounts[RunState.COMPLETED] === task.depends.length &&
+                runningTasks.length < job.concurrencyLimit) {
               // All dependencies completed.
               logger.info(`Task ${task.jobId}:${task.taskId} dependencies satsfied.`);
               taskControl.log.info('Task dependencies satisfied; task is ready to run.');
@@ -395,7 +401,6 @@ export default class Scheduler {
               logger.error(`Task ${task.jobId}:${task.taskId} container image never pulled.`);
               this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
               taskControl.log.error(`Container image ${task.image} never pulled.`);
-              this.releaseTaskResources(task, taskControl);
               taskControl.fail().then(() => {
                 this.emitTaskUpdate(task);
                 return this.jobQueue.wake(task.jobId, this.shortInterval);
@@ -443,7 +448,6 @@ export default class Scheduler {
           // Task was deleted, may have been successful or not.
           logger.info(`Task ${jobId}:${taskId} [${RunState[task.state]}] signaled deleted.`);
           taskControl.log.error('Worker task signaled deleted.');
-          taskControl.update({ k8Link: null });
           if (task.state === RunState.CANCELLING) {
             taskControl.cancel();
           } else {
@@ -463,7 +467,6 @@ export default class Scheduler {
               logger.error(`Task ${jobId}:${taskId} container image never pulled.`);
               taskControl.log.error(`Container image ${task.image} never pulled.`);
               this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
-              this.releaseTaskResources(task, taskControl);
               taskControl.fail().then(() => {
                 this.emitTaskUpdate(task);
                 return this.jobQueue.wake(task.jobId, this.shortInterval);
@@ -485,7 +488,6 @@ export default class Scheduler {
   private async onWorkerSucceeded(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
     logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] completed.`);
     this.jobQueue.addLog(task.jobId, 'info', `Task [${task.taskId}] completed.`);
-    this.releaseTaskResources(task, taskControl);
     const updated = await taskControl.finish();
     this.emitTaskUpdate(updated);
     return this.jobQueue.wake(task.jobId, this.shortInterval);
@@ -495,7 +497,6 @@ export default class Scheduler {
     logger.info(`Task ${task.jobId}:${task.taskId} [${RunState[task.state]}] failed.`);
     this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
     taskControl.log.error('Worker task failed.');
-    this.releaseTaskResources(task, taskControl);
     const updated = await taskControl.fail();
     this.emitTaskUpdate(updated);
     return this.jobQueue.wake(task.jobId, this.shortInterval);
@@ -521,18 +522,6 @@ export default class Scheduler {
       }
     }
     return false;
-  }
-
-  private releaseTaskResources(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
-    if (task.k8Link) {
-      return this.k8.deleteJob(task).then(resp => {
-        taskControl.update({ k8Link: null });
-      }, error => {
-        logger.error('K8 cancel failed:', error);
-        taskControl.log.error('Failed to release worker resources.');
-        taskControl.update({ k8Link: null }); // Consider it deleted anyway
-      });
-    }
   }
 
   private emitJobUpdate(job: JobRecord): JobRecord {
