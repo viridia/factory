@@ -261,7 +261,7 @@ export class Queue<P extends Job> extends EventEmitter {
         if (job.when.getTime() <= this.clock.time) {
           this.processOneJob(job.id);
         } else {
-          // console.log('change due soon', when.getTime() - windowBegin.getTime());
+          // console.log('change due soon', job.when.getTime() - windowBegin.getTime());
           this.clock.wakeAt(job.when, this.wakeCallback);
         }
       }

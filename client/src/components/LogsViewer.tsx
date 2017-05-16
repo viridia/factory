@@ -9,6 +9,7 @@ interface Props {
   open: boolean;
   onHide: () => void;
   logs: LogsQueryResult;
+  title: string;
 }
 
 interface State {
@@ -40,12 +41,12 @@ export class LogsViewer extends React.Component<Props, State> {
           onExited={this.onExited}
       >
         <Modal.Header closeButton={true}>
-          <Modal.Title>Logs for Task render.1</Modal.Title>
+          <Modal.Title>{this.props.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <section className="log-entries">
             {this.props.logs.loading ?
-              <div className="loading">loading...</div> :
+              <div className="loading">Loading&hellip;</div> :
               this.props.logs.entries.map(l => (<div className={classNames('entry', l.level)}>
                 <span className="date">[{dateformat(l.date)}]</span>&nbsp;
                 <span className="message">{l.message}</span>

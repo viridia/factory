@@ -30,6 +30,11 @@
         font-family: monospace;
         font-size: 14px;
 
+        > .loading {
+          color: #cda;
+          font-style: italic;
+        }
+
         > .entry {
           > .date {
             color: desaturate(darken(#adb, 10%), 20%);

@@ -43,6 +43,7 @@ class TaskControlForm extends React.Component<TaskControlFormProps, State> {
             open={this.state.showLogs}
             onHide={this.onCloseLogsViewer}
             logs={this.props.taskLogs}
+            title={`Logs for task ${task.id}`}
         />
       </section>
     );

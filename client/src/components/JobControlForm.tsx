@@ -63,6 +63,7 @@ class JobControlForm extends React.Component<JobControlFormProps, State> {
             open={this.state.showLogs}
             onHide={this.onCloseLogsViewer}
             logs={this.props.jobLogs}
+            title={'Logs for job'}
         />
       </section>
     );

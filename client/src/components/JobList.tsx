@@ -62,12 +62,13 @@ class JobList extends React.Component<MappedProps, undefined> {
             <th width="40%">Progress</th>
           </thead>
           <tbody>
-            {jobList.map(job => <JobListItem job={job} selected={job.id === selected} />)}
+            {jobList.map(job =>
+              <JobListItem key={job.id} job={job} selected={job.id === selected} />)}
           </tbody>
         </table>
       );
     } else if (loading) {
-      return <div className="loading">Loading...</div>;
+      return <div className="loading">Loading&hellip;</div>;
     } else {
       return <div className="empty-list">No Current Jobs</div>;
     }

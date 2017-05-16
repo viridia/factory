@@ -85,6 +85,7 @@ export default class Scheduler {
     // Job Queue processing loop.
     this.ready.then(() => {
       this.jobQueue.process((job, jobControl) => {
+        // logger.debug(`Processing Job: ${job.id} [${RunState[job.state]}].`);
         if (job.state === RunState.RUNNING) {
           if (!job.tasksCreated) {
             this.evalRecipe(job, jobControl);
@@ -92,12 +93,13 @@ export default class Scheduler {
             this.updateJobStatus(job, jobControl);
           }
         } else if (job.state === RunState.CANCELLING) {
-          this.cancelTasks(job, jobControl);
+          this.updateJobStatus(job, jobControl);
         }
       });
 
       // Task Queue processing loop.
       this.taskQueue.process((task, taskControl) => {
+        // logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
         if (task.state === RunState.RUNNING) {
           if (!task.workStarted) {
             this.beginTask(task, taskControl);
@@ -105,8 +107,9 @@ export default class Scheduler {
             this.updateTaskStatus(task, taskControl);
           }
         } else if (task.state === RunState.CANCELLING) {
-          logger.debug(`Processing Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
-          taskControl.cancel();
+          taskControl.cancel().then(() => {
+            this.jobQueue.wake(task.jobId, 1000);
+          });
         }
       });
     });
@@ -176,24 +179,6 @@ export default class Scheduler {
     return this.taskQueue.addJob(readyTasks);
   }
 
-  private async cancelTasks(job: JobRecord, jobControl: JobControl<JobRecord>) {
-    const tasks = await this.taskQueue.find({ jobId: job.id });
-    const promises = [];
-    jobControl.log.info('Cancelling tasks.');
-    for (const task of tasks) {
-      if (task.state !== RunState.CANCELLED && task.state !== RunState.FAILED) {
-        promises.push(this.taskQueue.getControl(task).setState(RunState.CANCELLING).end());
-      }
-    }
-    // Wait until all tasks are done.
-    await Promise.all(promises);
-    // Cancel the job.
-    const updated = await jobControl.cancel();
-    this.emitJobUpdate(updated);
-    // Notify all the tasks as a single update.
-    this.notifyTaskChange(job.id, { tasksUpdated: tasks.map(TaskRecord.serialize) });
-  }
-
   private updateJobStatus(job: JobRecord, jobControl: JobControl<JobRecord>) {
     logger.debug(`Updating job status: ${job.id} [${RunState[job.state]}]`);
     const later = new Date(Date.now() + this.longInterval);
@@ -232,7 +217,11 @@ export default class Scheduler {
         const taskControl = this.taskQueue.getControl(task);
         switch (task.state) {
           case RunState.WAITING:
-            if (depCounts[RunState.CANCELLING] > 0 || depCounts[RunState.CANCELLED] > 0) {
+            if (job.state === RunState.CANCELLING) {
+              this.cancelTask(task, taskControl, jobControl);
+              cancelledTasks.push(task.id);
+              taskChangedMap[task.taskId] = task;
+            } else if (depCounts[RunState.CANCELLING] > 0 || depCounts[RunState.CANCELLED] > 0) {
               // If any of our dependenies are cancelled, then this is too.
               logger.warn(`Task ${task.jobId}:${task.taskId} cancelled because ` +
                   'it depends on a task which was also cancelled.');
@@ -269,11 +258,16 @@ export default class Scheduler {
             break;
           case RunState.READY:
           case RunState.RUNNING:
-            // Ready tasks are considerd running for purposes of determining overall job state.
-            runningTasks.push(task.id);
+            if (job.state === RunState.CANCELLING) {
+              this.cancelTask(task, taskControl, jobControl);
+              cancelledTasks.push(task.id);
+              taskChangedMap[task.taskId] = task;
+            } else {
+              // Ready tasks are considerd running for purposes of determining overall job state.
+              runningTasks.push(task.id);
+            }
             break;
           case RunState.CANCELLING:
-          // case RunState.FAILING:
             // Tasks which are in the process of cancelling are treated as running for purposes
             // of determining whether the job is finished or not.
             runningTasks.push(task.id);
@@ -325,6 +319,9 @@ export default class Scheduler {
           jobControl.log.info('All tasks complete, setting status to cancelled.');
           jobControl.cancel();
         } else {
+          jobControl.log.info('Some tasks cancelled, job still waiting on tasks:');
+          // jobControl.log.info(`Waiting: ${job.waitingTasks.length}`);
+          // jobControl.log.info(`Waiting: ${job.runningTasks.length}`);
           jobControl.reschedule(this.mediumInterval);
         }
       } else if (job.runningTasks.length === 0 && job.waitingTasks.length === 0) {
@@ -332,11 +329,15 @@ export default class Scheduler {
         jobControl.finish();
       } else {
         // Still running
+        // jobControl.log.info('Job still waiting on tasks:');
+        // jobControl.log.info(`Waiting: ${job.waitingTasks.length}`);
+        // jobControl.log.info(`Waiting: ${job.runningTasks.length}`);
         jobControl.reschedule(this.longInterval);
       }
       this.emitJobUpdate(job);
       const tasksChanged = Object.getOwnPropertyNames(taskChangedMap);
-      logger.verbose(`${tasksChanged.length} tasks updated, sending notification.`, taskChangedMap);
+      logger.verbose(
+          `${tasksChanged.length} tasks updated, notifying ${taskChangedMap.length} tasls.`);
       if (tasksChanged.length > 0) {
         this.notifyTaskChange(job.id, {
           tasksUpdated: tasksChanged.map(id => TaskRecord.serialize(taskChangedMap[id])),
@@ -360,7 +361,7 @@ export default class Scheduler {
         taskControl.setState(RunState.RUNNING).update({
           k8Link: resp.data.metadata.selfLink,
         }).reschedule(this.mediumInterval).then(this.emitTaskUpdate);
-        this.jobQueue.wake(task.jobId, 1000);
+        this.jobQueue.wake(task.jobId, this.shortInterval);
       }, error => {
         if (error.response && error.response.data) {
           taskControl.log.error(error.response.data.message);
@@ -397,20 +398,11 @@ export default class Scheduler {
           this.onWorkerFailed(task, taskControl);
         } else {
           this.k8.getPodStatus(resp.metadata.name).then(pod => {
-            if (this.isPodNeverPulled(pod)) {
-              logger.error(`Task ${task.jobId}:${task.taskId} container image never pulled.`);
-              this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
-              taskControl.log.error(`Container image ${task.image} never pulled.`);
-              taskControl.fail().then(() => {
-                this.emitTaskUpdate(task);
-                return this.jobQueue.wake(task.jobId, this.shortInterval);
-              });
-              return;
+            if (!this.checkPodStatus(pod, taskControl)) {
+              taskControl.reschedule(this.longInterval);
             }
           });
-          // console.log('updateTaskStatus/K8 job status:', resp.status);
           // More work to do, wait...
-          taskControl.reschedule(this.longInterval);
         }
       }, error => {
         logger.info(`Task ${task.jobId}:${task.taskId} failed to query K8 status.`);
@@ -427,6 +419,14 @@ export default class Scheduler {
         return this.jobQueue.wake(task.jobId, this.shortInterval);
       });
     }
+  }
+
+  private cancelTask(
+      task: TaskRecord, taskControl: JobControl<TaskRecord>, jobControl: JobControl<JobRecord>) {
+    logger.warn(`Task ${task.jobId}:${task.taskId} cancelled.`);
+    taskControl.log.warning('Task cancelled.');
+    jobControl.log.warning(`Task '${task.taskId}' cancelled.`);
+    taskControl.cancel();
   }
 
   private handleK8Message(message: any) {
@@ -462,20 +462,7 @@ export default class Scheduler {
           // console.log('job message:', JSON.stringify(jobMessage, null, 2));
           // logger.debug(`Querying Pod state for task ${jobId}:${taskId}.`);
           this.k8.getPodStatus(jobMessage.metadata.name).then(pod => {
-            // console.log('pod status:', JSON.stringify(pod, null, 2));
-            if (this.isPodNeverPulled(pod)) {
-              logger.error(`Task ${jobId}:${taskId} container image never pulled.`);
-              taskControl.log.error(`Container image ${task.image} never pulled.`);
-              this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed.`);
-              taskControl.fail().then(() => {
-                this.emitTaskUpdate(task);
-                return this.jobQueue.wake(task.jobId, this.shortInterval);
-              });
-            } else if (jobMessage.status) {
-              // What is it trying to tell us?
-              // logger.info(`Task ${jobId}:${taskId} [${RunState[task.state]}] status change:`)
-              // console.info(jobMessage);
-            }
+            this.checkPodStatus(pod, taskControl);
           });
           // logger.verbose(JSON.stringify(jobMessage.metadata.name, null, 2));
         }
@@ -513,15 +500,34 @@ export default class Scheduler {
     return false;
   }
 
-  private isPodNeverPulled(pod: any) {
+  private checkPodStatus(pod: any, taskControl: JobControl<TaskRecord>) {
     if (pod && pod.status && pod.status.containerStatuses) {
       for (const cs of pod.status.containerStatuses) {
-        if (cs.state.waiting && cs.state.waiting.reason === 'ErrImageNeverPull') {
+        if (cs.state &&
+            cs.state.waiting &&
+            cs.state.waiting.reason === 'ErrImageNeverPull') {
+          this.podError(taskControl, 'container image never pulled.');
+          return true;
+        } else if (cs.lastState &&
+            cs.state.terminated &&
+            cs.state.terminated.exitCode !== 0) {
+          this.podError(taskControl, cs.lastState.terminated.message);
           return true;
         }
       }
     }
     return false;
+  }
+
+  private podError(taskControl: JobControl<TaskRecord>, message: string) {
+    const task = taskControl.job;
+    logger.info(`Task ${task.jobId}:${task.taskId} failed: ${message}.`);
+    this.jobQueue.addLog(task.jobId, 'error', `Task [${task.taskId}] failed: ${message}.`);
+    taskControl.log.error(`Task failed: ${message}.`);
+    return taskControl.fail().then(() => {
+      this.emitTaskUpdate(task);
+      return this.jobQueue.wake(task.jobId, this.shortInterval);
+    });
   }
 
   private emitJobUpdate(job: JobRecord): JobRecord {

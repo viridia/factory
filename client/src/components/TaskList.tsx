@@ -20,7 +20,11 @@ interface MappedProps {
 }
 
 function compareTasks(a: Task, b: Task) {
-  if (a.id < b.id) {
+  if (a.index < b.index) {
+    return -1;
+  } else if (a.index > b.index) {
+    return 1;
+  } else if (a.id < b.id) {
     return -1;
   } else if (a.id > b.id) {
     return 1;
@@ -75,12 +79,13 @@ class TaskList extends React.Component<MappedProps, undefined> {
             <div className="status">Status</div>
           </header>
           <section className="task-list-tbody">
-            {sortedTasks.map(task => <TaskListItem task={task} selected={task.id === selected} />)}
+            {sortedTasks.map(task =>
+                <TaskListItem key={task.id} task={task} selected={task.id === selected} />)}
           </section>
         </section>
       );
     } else if (loading) {
-      return <div className="loading">Loading...</div>;
+      return <div className="loading">Loading&hellip;</div>;
     } else {
       return <div className="empty-list">No Current Tasks</div>;
     }

@@ -3,21 +3,13 @@
 ## Components
 
 * Next steps:
-  * set working directory in container?
+  * non-real-time logging.
   * real-time logging.
-  * concurrency limits.
-  * don't release k8s jobs so eagerly
 
 Future:
 * Improve JSON schema error messages.
-* Number tasks sequentially
 * Number log lines sequentially
-
-Logging:
-* http stream? No because that doesn't permit load-balancing. DS is the better strategy.
-  * unless *every* director instance is going to listen to every log event
-  * maybe that's not so bad.
-* topic: job.{jobId}.logs:
+* Configurable concurrency limits.
 
 Future:
 * Page that shows orphan workers.
