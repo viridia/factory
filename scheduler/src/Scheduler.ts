@@ -334,11 +334,11 @@ export default class Scheduler {
         // jobControl.log.info(`Waiting: ${job.runningTasks.length}`);
         jobControl.reschedule(this.longInterval);
       }
+      // TODO: Can we avoid this if nothing changed?
       this.emitJobUpdate(job);
       const tasksChanged = Object.getOwnPropertyNames(taskChangedMap);
-      logger.verbose(
-          `${tasksChanged.length} tasks updated, notifying ${taskChangedMap.length} tasls.`);
       if (tasksChanged.length > 0) {
+        logger.verbose(`${tasksChanged.length} tasks updated.`);
         this.notifyTaskChange(job.id, {
           tasksUpdated: tasksChanged.map(id => TaskRecord.serialize(taskChangedMap[id])),
         });
