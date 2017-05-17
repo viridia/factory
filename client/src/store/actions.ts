@@ -24,6 +24,7 @@ import {
   TASK_LOGS_ERROR,
   TASK_LOGS_RECEIVED,
   TASK_LOGS_REQUESTED,
+  TASK_WORKLOGS_RECEIVED,
   TASKS_CANCELLED,
   TASKS_UPDATED,
 } from './actionIds';
@@ -50,6 +51,7 @@ export const taskListReceived = createAction<undefined>(TASK_LIST_RECEIVED);
 export const taskListError = createAction<undefined>(JOBS_LIST_ERROR);
 export const taskLogsRequested = createAction<undefined>(TASK_LOGS_REQUESTED);
 export const taskLogsReceived = createAction<undefined>(TASK_LOGS_RECEIVED);
-export const taskLogsError = createAction<undefined>(JOB_LOGS_ERROR);
+export const taskLogsError = createAction<undefined>(TASK_LOGS_ERROR);
+export const taskWorkLogsReceived = createAction<undefined>(TASK_WORKLOGS_RECEIVED);
 export const tasksCancelled = createAction<string[]>(TASKS_CANCELLED);
 export const tasksUpdated = createAction<Task[]>(TASKS_UPDATED);

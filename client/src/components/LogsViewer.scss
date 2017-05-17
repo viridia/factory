@@ -22,13 +22,17 @@
       align-items: stretch;
       padding: 4px;
 
-      > .log-entries {
+      > .log-entries, .worker-entries {
         flex: 1;
+        flex-basis: auto;
+        min-height: 10em;
         background-color: #244;
         overflow-y: auto;
         padding: 4px;
         font-family: monospace;
         font-size: 14px;
+
+        color: #ac7;
 
         > .loading {
           color: #cda;
@@ -52,6 +56,15 @@
             color: #f77;
           }
         }
+      }
+
+      > .log-entries {
+        margin-bottom: 8px;
+      }
+
+      > .worker-entries {
+        overflow-x: auto;
+        white-space: nowrap;
       }
     }
   }

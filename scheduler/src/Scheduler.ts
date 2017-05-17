@@ -437,13 +437,13 @@ export default class Scheduler {
     this.taskQueue.find({ jobId, taskId }).then((tasks: TaskRecord[]) => {
       if (tasks.length >= 1) {
         const task = tasks[0];
-        const taskControl = this.taskQueue.getControl(task);
         if (task.state === RunState.FAILED ||
             task.state === RunState.CANCELLED ||
             task.state === RunState.COMPLETED) {
           return;
         }
 
+        const taskControl = this.taskQueue.getControl(task);
         if (message.type === 'DELETED') {
           // Task was deleted, may have been successful or not.
           logger.info(`Task ${jobId}:${taskId} [${RunState[task.state]}] signaled deleted.`);
@@ -453,9 +453,11 @@ export default class Scheduler {
           } else {
             taskControl.finish();
           }
-        } else if (jobMessage.status.failed > 0) {
+          return;
+        }
+
+        if (jobMessage.status.failed > 0) {
           this.onWorkerFailed(task, taskControl);
-          // console.log(jobMessage);
         } else if (this.isComplete(jobMessage)) {
           this.onWorkerSucceeded(task, taskControl);
         } else {

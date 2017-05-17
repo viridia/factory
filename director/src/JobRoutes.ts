@@ -2,6 +2,7 @@ import * as Ajv from 'ajv';
 import Axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
+import * as http from 'http';
 import {
   Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
 } from '../../common/types/api';
@@ -26,13 +27,11 @@ export default class JobRoutes {
     this.deepstream = deepstream;
     this.jobQueue = jobQueue;
     this.taskQueue = taskQueue;
+    logger.level = 'debug';
     this.routes();
     this.k8Api = Axios.create({
       baseURL: `http://${process.env.K8_HOST}:${process.env.K8_PORT}`,
     });
-    // this.jobQueue.on('log', (queueId: string, jobId: string) => {
-    //   console.log('Log event added to:', queueId, jobId);
-    // });
   }
 
   /** Add this router to the parent router. */
@@ -44,6 +43,7 @@ export default class JobRoutes {
     this.router.get('/:id/tasks', this.getTasks.bind(this));
     this.router.get('/:id/tasks/:task', this.getTask.bind(this));
     this.router.get('/:id/tasks/:task/logs', this.getTaskLogs.bind(this));
+    this.router.get('/:id/tasks/:task/wkrlogs', this.getWorkerLogs.bind(this));
     this.router.get('/:id', this.getJob.bind(this));
     this.router.patch('/:id', this.patchJob.bind(this));
     this.router.delete('/:id', this.deleteJob.bind(this));
@@ -222,6 +222,86 @@ export default class JobRoutes {
       res.status(500).json({ error: 'internal', message: error.message });
       logger.error(`Error getting job tasks:`, error);
     });
+  }
+
+  private getWorkerLogs(req: Request, res: Response, next: NextFunction): void {
+    this.k8Api.get(`/api/v1/namespaces/default/pods`, {
+      params: {
+        labelSelector: `job-name=factory-${req.params.task}-${req.params.id}`,
+      },
+    }).then(resp => {
+      req.on('abort', () => {
+        console.log('request abort.');
+      });
+      if (resp.data && resp.data.items && resp.data.items.length === 1) {
+        const pod = resp.data.items[0];
+        this.k8Api.get(`${pod.metadata.selfLink}/log`).then(r2 => {
+          res.send(r2.data);
+        });
+      } else {
+        res.status(500).json({ error: 'not-found' });
+      }
+
+      // Streaming - doesn't work in express for some reason.
+      //   const req2 = http.request({
+      //     host: process.env.K8_HOST,
+      //     port: process.env.K8_PORT,
+      //     path: `${pod.metadata.selfLink}/log?follow=true`,
+      //     headers: {
+      //       'Cache-Control': 'no-cache',
+      //       'Connection': 'keep-alive',
+      //       'Content-Type': 'application/octet-stream',
+      //       // 'Content-Type': 'text/json',
+      //       'Transfer-Encoding': 'chunked',
+      //     },
+      //   }, res2 => {
+      //     // let buffer = Buffer.from([]);
+      //     res2.on('data', (data: any) => {
+      //       console.log(`sending data: ${data.length} bytes.`);
+      //       console.log(`${data.length.toString(16)}\r\n`);
+      //       res.write(`${data.length.toString(16)}\r\n`);
+      //       res.write(data);
+      //       res.write('\r\n');
+      //     });
+      //     res2.on('end', (data: any) => {
+      //       console.log('Log stream ended.');
+      //       res.end();
+      //     });
+      //     res2.on('close', (data: any) => {
+      //       console.log('Log stream closed.');
+      //       res.end();
+      //     });
+      //     res2.on('error', (data: any) => {
+      //       console.log('Log stream error.');
+      //       res.write('0\r\n\r\n');
+      //       res.end();
+      //     });
+      //   });
+      //   req2.end();
+      //   return req;
+      // }
+    }, error => {
+      res.status(500).json({ error: 'internal', message: error.message });
+      logger.error(`Error getting job tasks:`, error);
+    });
+    // this.taskQueue.find(this.taskQuery(req.params.id, req.params.task)).then(tasks => {
+    //   if (tasks.length === 1) {
+    //     const task = tasks[0];
+    //     // OK this is complicated.
+    //     // First, the worker might not yet be started.
+    //
+    //     // this.taskQueue.getLogs().filter({ job: tasks[0].id }).orderBy('date').run()
+    //     // this.taskQueue.getLogs(tasks[0].id).then(entries => {
+    //     //   res.json(entries);
+    //     // }, (error: any) => {
+    //     //   res.status(500).json({ error: 'internal', message: error.message });
+    //     //   logger.error(`Error getting job logs:`, error);
+    //     // });
+    //   } else {
+    //     logger.error(`Task ${req.params.id}:${req.params.task} not found.`, tasks.length);
+    //     res.json([]);
+    //   }
+    // });
   }
 
   private cancelJob(job: JobRecord, res: Response) {
