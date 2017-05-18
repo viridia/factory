@@ -61,11 +61,11 @@ case $1 in
   db)
     case $2 in
       start)
-        kubectl create -f "$BASEDIR/config/rethinkdb-dev.yml"
+        kubectl create -f "$BASEDIR/config/dev/rethinkdb.yml"
         ;;
 
       stop)
-        kubectl delete -f "$BASEDIR/config/rethinkdb-dev.yml"
+        kubectl delete -f "$BASEDIR/config/dev/rethinkdb.yml"
         ;;
 
       *)
@@ -78,11 +78,11 @@ case $1 in
   ds)
     case $2 in
       start)
-        kubectl create -f "$BASEDIR/config/deepstream-dev.yml"
+        kubectl create -f "$BASEDIR/config/dev/deepstream.yml"
         ;;
 
       stop)
-        kubectl delete -f "$BASEDIR/config/deepstream-dev.yml"
+        kubectl delete -f "$BASEDIR/config/dev/deepstream.yml"
         ;;
 
       *)

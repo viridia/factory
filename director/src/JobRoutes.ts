@@ -284,24 +284,6 @@ export default class JobRoutes {
       res.status(500).json({ error: 'internal', message: error.message });
       logger.error(`Error getting job tasks:`, error);
     });
-    // this.taskQueue.find(this.taskQuery(req.params.id, req.params.task)).then(tasks => {
-    //   if (tasks.length === 1) {
-    //     const task = tasks[0];
-    //     // OK this is complicated.
-    //     // First, the worker might not yet be started.
-    //
-    //     // this.taskQueue.getLogs().filter({ job: tasks[0].id }).orderBy('date').run()
-    //     // this.taskQueue.getLogs(tasks[0].id).then(entries => {
-    //     //   res.json(entries);
-    //     // }, (error: any) => {
-    //     //   res.status(500).json({ error: 'internal', message: error.message });
-    //     //   logger.error(`Error getting job logs:`, error);
-    //     // });
-    //   } else {
-    //     logger.error(`Task ${req.params.id}:${req.params.task} not found.`, tasks.length);
-    //     res.json([]);
-    //   }
-    // });
   }
 
   private cancelJob(job: JobRecord, res: Response) {
