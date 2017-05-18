@@ -7,8 +7,11 @@
   "license": "UNLICENSED",
   "scripts": {
     "build-image-agent": "cd images/agent && docker build --rm -f Dockerfile -t agent:0.0.1 .",
+    "build-image-client": "docker build --rm -f images/client/Dockerfile -t client:0.0.1 .",
+    "build-image-directory": "docker build --rm -f images/director/Dockerfile -t director:0.0.1 .",
     "build-image-mandelbrot": "cd images/mandelbrot && docker build --rm -f Dockerfile -t mandelbrot:0.0.1 .",
     "build-image-k8shell": "cd images/k8shell && docker build --rm -f Dockerfile -t k8shell:0.0.1 .",
+    "build-image-scheduler": "docker build --rm -f images/scheduler/Dockerfile -t scheduler:0.0.1 .",
     "debug-director": "RETHINKDB_PROXY_SERVICE_HOST=$(minikube ip) DEEPSTREAM_SERVICE_HOST=$(minikube ip) ts-node --inspect --debug-brk ./director/src/index.ts",
     "debug-scheduler": "RETHINKDB_PROXY_SERVICE_HOST=$(minikube ip) DEEPSTREAM_SERVICE_HOST=$(minikube ip) ts-node --inspect --debug-brk ./scheduler/src/index.ts",
     "director": "ts-node ./director/src/index.ts",

@@ -7,6 +7,9 @@
     "target": "es6",
     "jsx": "react",
     "baseUrl": "./src",
+    "paths": {
+      "api": ["../../common/types/api"]
+    },
     "typeRoots": [
       "node_modules/@types",
       "node_modules/deepstream.io-client-ks/src"
@@ -14,7 +17,8 @@
   },
   "include": [
     "./src/**/*.ts",
-    "./src/**/*.tsx"
+    "./src/**/*.tsx",
+    "../common/types/api/*.ts"
   ],
   "exclude": [
     "./src/**/*.spec.ts"

@@ -1,4 +1,5 @@
 node_modules/
+/client/dist
 /client/src/api
 /sandbox
 *.pid

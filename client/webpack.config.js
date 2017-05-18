@@ -24,6 +24,9 @@ module.exports = {
     filename: '[name].bundle.js',
   },
   resolve: {
+    alias: {
+      api: path.resolve(__dirname, '../common/types/api'),
+    },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
     modules: [
       path.resolve(__dirname, 'src'),

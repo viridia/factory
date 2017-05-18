@@ -71,6 +71,9 @@ export default class App {
     new ConfigRoutes().apply(apiRouter);
     new JobRoutes(this.jobQueue, this.taskQueue, this.deepstream).apply(apiRouter);
     new RecipeRoutes(this.conn, this.db).apply(apiRouter);
+    router.get('/healthz', (req, res, next) => {
+      res.json({ health: 'OK' });
+    });
 
     // Proxy frontend server.
     router.use('/', proxy(process.env.FRONTEND_PROXY_HOST));

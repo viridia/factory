@@ -1,0 +1,31 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    server: schedulery
+  name: scheduler-replica
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        server: scheduler
+        role: replica
+    spec:
+      containers:
+        - name: scheduler
+          image: scheduler:0.0.1
+          imagePullPolicy: Never
+          stdin: true
+          tty: true
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #   initialDelaySeconds: 5
+      #     volumeMounts:
+      #       - mountPath: /usr/src/host
+      #         name: src
+      # volumes:
+      #   - name: src
+      #     hostPath:
+      #       path: /mount-9p/
