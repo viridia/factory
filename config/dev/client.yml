@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     server: client
-  name: client-service
+  name: client
 spec:
   type: NodePort
   ports:
@@ -30,27 +30,8 @@ spec:
         server: client
     spec:
       containers:
-        - name: nginx # Use a vanilla nginx container image
-          image: nginx:1.7.9
+        - name: nginx
+          image: client:0.0.1
           ports:
           - containerPort: 80
             name: http
-          volumeMounts:
-          - mountPath: /etc/nginx/conf.d # Map in the nginx config file file
-            name: client-files
-            subPath: nginx
-          - mountPath: /usr/share/nginx/html # Map in the built assets
-            name: client-files
-        - name: client
-          image: client:0.0.1
-          imagePullPolicy: Never
-          volumeMounts:
-          - mountPath: /usr/share
-            name: client-files
-          lifecycle:
-            postStart:
-              exec:
-                command: ["cp", "-R", "/usr/nimble/src/client/.", "/usr/share"]
-      volumes:
-      - name: client-files
-        emptyDir: {}

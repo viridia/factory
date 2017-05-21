@@ -1,4 +1,4 @@
-# A container for the scheduler component.
+# A container for the director component.
 FROM node:7.9-alpine
 RUN apk add --no-cache bash sed grep coreutils git
 
@@ -13,11 +13,11 @@ WORKDIR ${SRC}
 
 ADD common/ ${SRC}/common/
 ADD queue/ ${SRC}/queue/
-ADD scheduler/ ${SRC}/scheduler/
+ADD director/ ${SRC}/director/
 ADD package.json ${SRC}/
 ADD tsconfig.json ${SRC}/
 ADD yarn.lock ${SRC}/
 
 RUN cd ${SRC} && yarn install --pure-lockfile
 
-ENTRYPOINT ["yarn", "run", "scheduler"]
+ENTRYPOINT ["yarn", "run", "director"]

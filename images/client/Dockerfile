@@ -1,26 +1,15 @@
-# A container whose purpose is to provide the logging agent for worker pods.
-FROM node:7.9-alpine
-RUN apk add --no-cache bash sed grep coreutils git
+# A container whose purpose is to serve the frontend files for the client.
+FROM nginx:1.13
 
-ARG NODE_ENV
-ENV NODE_ENV $NODE_ENV
+ENV HTML=/usr/share/nginx/html
 
-ENV SRC=/usr/nimble/src
+RUN mkdir -p ${HTML}
 
-RUN mkdir -p ${SRC}
+WORKDIR ${HTML}
 
-WORKDIR ${SRC}
+# Copy frontend content - note it must be built first.
+ADD client/index.html ${HTML}/
+ADD client/dist/ ${HTML}/dist/
 
-ADD client/src/ ${SRC}/client/src/
-ADD client/nginx/ ${SRC}/client/nginx/
-ADD client/index.html ${SRC}/client/index.html
-ADD client/package.json ${SRC}/client/package.json
-ADD client/tsconfig.json ${SRC}/client/tsconfig.json
-ADD client/webpack.config.js ${SRC}/client/webpack.config.js
-ADD client/yarn.lock ${SRC}/client/yarn.lock
-ADD common/ ${SRC}/common/
-
-RUN cd ${SRC}/client && yarn install --pure-lockfile && yarn build
-
-# Since this docker image merely hosts static files, just wait forever.
-ENTRYPOINT ["sleep", "infinity"]
+# Copy nginx config
+ADD images/client/nginx.factory.conf /etc/nginx/conf.g/

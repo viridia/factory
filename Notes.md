@@ -10,6 +10,8 @@ Future:
 * Improve JSON schema error messages.
 * Number log lines sequentially
 * Configurable concurrency limits.
+* Move logger and k8service into common
+* Move types/api into api
 
 Future:
 * Page that shows orphan workers.

@@ -1,7 +1,12 @@
+import * as dotenv from 'dotenv';
 import App from './App';
-import config from './config';
+import { logger } from './logger';
+
+dotenv.config();
 
 const app = new App();
 app.ready.then(() => {
-  app.express.listen(config.port);
+  const port = parseInt(process.env.PORT, 10) || 80;
+  logger.info(`Listening on port: ${port}.`);
+  app.express.listen(port);
 });

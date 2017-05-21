@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // TODO(talin) - get this URL from the backend.
   axios.get('/api/v1/config').then(resp => {
     globals.hosts = resp.data.hosts;
-    globals.deepstream = deepstream(globals.hosts.deepstream).login();
+    // Most of the time we want to log in to the DS router hosted on the same domain, but for
+    // local development we want to use a development router.
+    globals.deepstream = deepstream(
+        globals.hosts.deepstream || `wss://${window.location.hostname}`).login();
     ReactDOM.render(
       <Provider store={store}><Page /></Provider>,
       document.getElementById('react-root'));

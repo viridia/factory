@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: factory-ingress
+  annotations:
+    nginx.org/websocket-services: "deepstream"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api/v1
+        backend:
+          serviceName: director
+          servicePort: 8087
+      - path: /deepstream
+        backend:
+          serviceName: deepstream
+          servicePort: 8008
+      - path: /
+        backend:
+          serviceName: client
+          servicePort: 80

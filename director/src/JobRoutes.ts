@@ -3,6 +3,7 @@ import Axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as http from 'http';
+import Service from '../../common/k8/Service';
 import {
   Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
 } from '../../common/types/api';
@@ -18,6 +19,7 @@ export default class JobRoutes {
   private jobQueue: Queue<JobRecord>;
   private taskQueue: Queue<TaskRecord>;
   private deepstream: deepstreamIO.Client;
+  private k8Service: Service;
   private k8Api: AxiosInstance;
 
   constructor(
@@ -29,8 +31,10 @@ export default class JobRoutes {
     this.taskQueue = taskQueue;
     logger.level = 'debug';
     this.routes();
+    this.k8Service = new Service();
     this.k8Api = Axios.create({
-      baseURL: `http://${process.env.K8_HOST}:${process.env.K8_PORT}`,
+      baseURL:
+        `http://${process.env.KUBERNETES_SERVICE_HOST}:${process.env.KUBERNETES_SERVICE_PORT}`,
     });
   }
 
@@ -81,21 +85,23 @@ export default class JobRoutes {
       if (job.state !== RunState.RUNNING) {
         const promises: Array<Promise<any>> = [];
         // Delete all K8 jobs with that are labeled with this job's id.
-        promises.push(this.k8Api.delete('/apis/batch/v1/namespaces/default/jobs', {
+        promises.push(this.k8Service.delete('/apis/batch/v1/namespaces/default/jobs', {
           params: {
             labelSelector: `factory.job=${job.id}`,
           },
         }).catch(error => {
-          logger.error('Error deleting K8 jobs:', error.message || error, error.response.data);
+          logger.error('Error deleting K8 jobs:',
+              error.message || error, error.response && error.response.data);
         }));
 
         // Delete all K8 ppods with that are labeled with this job's id.
-        promises.push(this.k8Api.delete('/api/v1/namespaces/default/pods', {
+        promises.push(this.k8Service.delete('/api/v1/namespaces/default/pods', {
           params: {
             labelSelector: `factory.job=${job.id}`,
           },
         }).catch(error => {
-          logger.error('Error deleting K8 pods:', error.message || error, error.response.data);
+          logger.error('Error deleting K8 pods:',
+              error.message || error, error.response && error.response.data);
         }));
 
         // Delete job logs
@@ -225,7 +231,7 @@ export default class JobRoutes {
   }
 
   private getWorkerLogs(req: Request, res: Response, next: NextFunction): void {
-    this.k8Api.get(`/api/v1/namespaces/default/pods`, {
+    this.k8Service.get(`/api/v1/namespaces/default/pods`, {
       params: {
         labelSelector: `job-name=factory-${req.params.task}-${req.params.id}`,
       },
@@ -235,7 +241,7 @@ export default class JobRoutes {
       });
       if (resp.data && resp.data.items && resp.data.items.length === 1) {
         const pod = resp.data.items[0];
-        this.k8Api.get(`${pod.metadata.selfLink}/log`).then(r2 => {
+        this.k8Service.get(`${pod.metadata.selfLink}/log`).then(r2 => {
           res.send(r2.data);
         });
       } else {

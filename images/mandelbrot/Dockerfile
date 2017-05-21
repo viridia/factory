@@ -12,7 +12,7 @@ ENV SANDBOX=/usr/nimble/sandbox
 RUN mkdir -p ${SANDBOX}
 
 # Copy in the sources we need.
-ADD mandelbrot.go ${WORK}/
+ADD images/mandelbrot/mandelbrot.go ${WORK}/
 run go build mandelbrot.go
 
 ADD start.sh ${WORK}/

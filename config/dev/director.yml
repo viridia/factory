@@ -1,24 +1,22 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: director
   labels:
     server: director
-  name: director
 spec:
-  type: NodePort
   ports:
-   - port: 8080
-     targetPort: websocket
-     nodePort: 31002
+   - port: 8087
+     targetPort: http
   selector:
-    server: deepstream
+    server: director
     role: replica
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   labels:
-    server: directory
+    server: director
   name: director-replica
 spec:
   template:
@@ -31,13 +29,22 @@ spec:
         - name: director
           image: director:0.0.1
           imagePullPolicy: Never
-          restartPolicy: OnFailure
-          stdin: true
-          tty: true
+          env:
+            - name: DB_NAME
+              value: Factory
+            - name: JOB_QUEUE_NAME
+              value: JobQueue
+            - name: TASK_QUEUE_NAME
+              value: TaskQueue
+            - name: PORT
+              value: '80'
+            - name: USE_PROXY
+              value: true
           ports:
-          - containerPort: 8087
+          - containerPort: 80
             name: http
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /api/v1/healthz
+              port: http
             initialDelaySeconds: 5

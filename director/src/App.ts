@@ -7,7 +7,6 @@ import { connect, Connection, Db } from 'rethinkdb';
 import { ensureDbsExist, ensureTablesExist } from '../../common/db/util';
 import { JobRecord, TaskRecord } from '../../common/types/queue';
 import * as queue from '../../queue';
-import config from './config';
 import ConfigRoutes from './ConfigRoutes';
 import JobRoutes from './JobRoutes';
 import { logger } from './logger';
@@ -27,33 +26,42 @@ export default class App {
 
   constructor() {
     this.express = express();
-    this.deepstream = deepstream(
-      `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`).login();
+    this.ready = this.init(); // Asynchronous initialization.
+  }
 
-    this.ready = connect({
+  private async init() {
+    const dsHost = `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`;
+    logger.info(`Connecting to Deepstream router: ${dsHost}.`);
+    this.deepstream = deepstream(dsHost).login();
+
+    logger.info(`Connecting to RethinkDB: ${process.env.RETHINKDB_PROXY_SERVICE_HOST}:` +
+        `${process.env.RETHINKDB_PROXY_SERVICE_PORT}.`);
+    this.conn = await connect({
       host: process.env.RETHINKDB_PROXY_SERVICE_HOST,
       port: process.env.RETHINKDB_PROXY_SERVICE_PORT,
-    }).then((conn: Connection) => {
-      this.conn = conn;
-      return ensureDbsExist(this.conn, [process.env.DB_NAME]);
-    }).then(() => {
-      // Create the recipes table if it does not exist.
-      this.db = r.db(process.env.DB_NAME);
-      ensureTablesExist(this.conn, process.env.DB_NAME, ['Recipes']);
-    }).then(() => {
-      this.jobQueue = new  queue.Queue<JobRecord>(this.conn, {
-        db: process.env.DB_NAME,
-        name: process.env.JOB_QUEUE_NAME,
-      });
-      this.taskQueue = new queue.Queue<TaskRecord>(this.conn, {
-        db: process.env.DB_NAME,
-        name: process.env.TASK_QUEUE_NAME,
-      });
-
-      // Install middlewares and routes
-      this.middleware();
-      this.routes();
     });
+
+    await ensureDbsExist(this.conn, [process.env.DB_NAME]);
+
+    // Create the recipes table if it does not exist.
+    this.db = r.db(process.env.DB_NAME);
+    await ensureTablesExist(this.conn, process.env.DB_NAME, ['Recipes']);
+
+    logger.info(`Connecting to job queue ${process.env.DB_NAME}:${process.env.JOB_QUEUE_NAME}.`);
+    this.jobQueue = new  queue.Queue<JobRecord>(this.conn, {
+      db: process.env.DB_NAME,
+      name: process.env.JOB_QUEUE_NAME,
+    });
+
+    logger.info(`Connecting to task queue ${process.env.DB_NAME}:${process.env.TASK_QUEUE_NAME}.`);
+    this.taskQueue = new queue.Queue<TaskRecord>(this.conn, {
+      db: process.env.DB_NAME,
+      name: process.env.TASK_QUEUE_NAME,
+    });
+
+    // Install middlewares and routes
+    this.middleware();
+    this.routes();
   }
 
   /** Install needed middleware. */
@@ -71,12 +79,14 @@ export default class App {
     new ConfigRoutes().apply(apiRouter);
     new JobRoutes(this.jobQueue, this.taskQueue, this.deepstream).apply(apiRouter);
     new RecipeRoutes(this.conn, this.db).apply(apiRouter);
-    router.get('/healthz', (req, res, next) => {
+    apiRouter.get('/healthz', (req, res, next) => {
       res.json({ health: 'OK' });
     });
 
     // Proxy frontend server.
-    router.use('/', proxy(process.env.FRONTEND_PROXY_HOST));
+    if (process.env.FRONTEND_PROXY_HOST) {
+      router.use('/', proxy(process.env.FRONTEND_PROXY_HOST));
+    }
 
     // Install the router.
     this.express.use(router);

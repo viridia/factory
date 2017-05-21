@@ -19,8 +19,14 @@ export default class ConfigRoutes {
   }
 
   private getConfig(req: Request, res: Response, next: NextFunction): void {
+    let deepstream = null;
+    // In development mode, have the frontend connect to DS directly instead of going through
+    // the proxy (since there is none).
+    if (process.env.USE_PROXY !== 'true') {
+      deepstream = `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`;
+    }
     res.json({ hosts: {
-      deepstream: `${process.env.DEEPSTREAM_SERVICE_HOST}:${process.env.DEEPSTREAM_SERVICE_PORT}`,
+      deepstream,
     } });
   }
 }

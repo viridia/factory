@@ -11,14 +11,43 @@ usage() {
   echo "  start - start the k8shell container."
   echo "  stop - stop the k8shell container."
   echo "  shell - open a shell into the development container."
-  echo "  db up - start the database service."
-  echo "  db down - stop the database service."
-  echo "  ds up - start the deepstream.io service."
-  echo "  ds down - stop the deepstream.io service."
+  echo "  client (build|up|down|replace) - start / stop the client server."
+  echo "  db (up|down|replace) - start / stop the database."
+  echo "  director (build|up|down|replace) - start / stop the director."
+  echo "  ds (up|down|replace) - start / stop the deepstream router."
+  echo "  ingress (up|down|replace) - start / stop the ingress."
+  echo "  scheduler (build|up|down|replace) - start / stop the scheduler."
   echo "  proxy start - start the proxy to the Kubernetes control port."
   echo "  proxy stop - stop the proxy to the Kubernetes control port."
   echo "  prune - delete all factory pods."
   exit 1
+}
+
+service() {
+  case $1 in
+    up)
+      kubectl create -f "$BASEDIR/${3}"
+      ;;
+
+    down)
+      kubectl delete -f "$BASEDIR/${3}"
+      ;;
+
+    replace)
+      kubectl replace -f "$BASEDIR/${3}"
+      ;;
+
+    build)
+      yarn run "build-image-${2}"
+      ;;
+
+    *)
+      echo "unrecognized ${2} option: '$1'"
+      usage
+      exit 1
+      ;;
+
+  esac
 }
 
 if [[ $# -eq 0 ]]; then
@@ -62,42 +91,28 @@ case $1 in
     kubectl exec -it k8shell -- /bin/bash
     ;;
 
+  client)
+    service "$2" "client" "config/dev/client.yml"
+    ;;
+
   db)
-    case $2 in
-      up)
-        kubectl create -f "$BASEDIR/config/dev/rethinkdb.yml"
-        ;;
+    service "$2" "database" "config/dev/rethinkdb.yml"
+    ;;
 
-      down)
-        kubectl delete -f "$BASEDIR/config/dev/rethinkdb.yml"
-        ;;
-
-      *)
-        echo "unrecognized db option: '$2'"
-        usage
-        exit 1
-        ;;
-
-    esac
+  director)
+    service "$2" "director" "config/dev/director.yml"
     ;;
 
   ds)
-    case $2 in
-      up)
-        kubectl create -f "$BASEDIR/config/dev/deepstream.yml"
-        ;;
+    service "$2" "deepstream" "config/dev/deepstream.yml"
+    ;;
 
-      down)
-        kubectl delete -f "$BASEDIR/config/dev/deepstream.yml"
-        ;;
+  ingress)
+    service "$2" "ingress" "config/dev/ingress.yml"
+    ;;
 
-      *)
-        echo "unrecognized ds option: '$2'"
-        usage
-        exit 1
-        ;;
-
-    esac
+  scheduler)
+    service "$2" "scheduler" "config/dev/scheduler.yml"
     ;;
 
   proxy)

@@ -5,7 +5,7 @@ metadata:
     server: schedulery
   name: scheduler-replica
 spec:
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       labels:
@@ -16,8 +16,13 @@ spec:
         - name: scheduler
           image: scheduler:0.0.1
           imagePullPolicy: Never
-          stdin: true
-          tty: true
+          env:
+            - name: DB_NAME
+              value: Factory
+            - name: JOB_QUEUE_NAME
+              value: JobQueue
+            - name: TASK_QUEUE_NAME
+              value: TaskQueue
           # livenessProbe:
           #   httpGet:
           #     path: /healthz
