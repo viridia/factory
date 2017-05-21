@@ -75,11 +75,32 @@ Now you can view the frontend at the following url:
 
     http://localhost:8087
 
+## Running in a local cluster
+
+You can also run the servers in a local Kubernetes cluster. Assuming you have minikube started
+already, and your docker environment variables are set properly (see above), the commands are:
+
+    yarn run build-image-client
+    yarn run build-image-director
+    yarn run build-image-scheduler
+    ./vm client up
+    ./vm ingress up
+    ./vm director up
+    ./vm scheduler up
+
+    minikube ip # Prints out IP address of cluster
+
+Now enter the address printed by the last step in your web browser. Note: you *must* use https,
+and you will get a browser security warning, since there's no certificate.
+
 ## k8shell
 
 `k8shell` is a simple docker container that mounts the project source tree as a shared volume,
-so that you can access all of the source files from a virtual machine inside the cluster. To use
-it, do the following:
+so that you can access all of the source files from a virtual machine inside the cluster. k8shell
+also contains some useful unix utilities like curl and git. One thing this allows you to do is
+see all of the environment variables that a pod would see.
+
+To use it, do the following:
 
     # Build the k8shell image
     yarn run build-image-k8shell
