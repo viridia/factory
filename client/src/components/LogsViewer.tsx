@@ -32,6 +32,7 @@ export class LogsViewer extends React.Component<Props, State> {
   }
 
   public render() {
+    const workerEntries = this.props.logs.workerEntries || [];
     return (this.props.open || this.state.show) && (
       <Modal
           className="factory-dialog"
@@ -52,10 +53,10 @@ export class LogsViewer extends React.Component<Props, State> {
                 <span className="message">{l.message}</span>
               </div>))}
           </section>
-          {this.props.logs.workerEntries.length > 0 && <header>Worker Logs</header>}
-          {this.props.logs.workerEntries.length > 0 && (
+          {workerEntries.length > 0 && <header>Worker Logs</header>}
+          {workerEntries.length > 0 && (
             <section className="worker-entries">
-              {this.props.logs.workerEntries.map(l => <div className="entry">{l}</div>)}
+              {workerEntries.map(l => <div className="entry">{l}</div>)}
             </section>)}
         </Modal.Body>
         <Modal.Footer>

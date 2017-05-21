@@ -38,10 +38,6 @@
   version "7.0.18"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.18.tgz#cd67f27d3dc0cfb746f0bdd5e086c4c5d55be173"
 
-"@types/qs":
-  version "6.2.31"
-  resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.2.31.tgz#7d929bd877f9cd3ece6415c602b7cf9b077133f1"
-
 "@types/rethinkdb":
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/@types/rethinkdb/-/rethinkdb-2.3.2.tgz#f5cb0521d1daf63495b34557375978c0f793ec16"
@@ -1461,7 +1457,7 @@ punycode@^1.4.1:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-1.4.1.tgz#c0d5a63b2718800ad8e1eb0fa5269c84dd41845e"
 
-qs, qs@~6.4.0, qs@6.4.0:
+qs@~6.4.0, qs@6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.4.0.tgz#13e26d28ad6b0ffaa91312cd3bf708ed351e7233"
 

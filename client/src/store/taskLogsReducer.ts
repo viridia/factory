@@ -76,7 +76,7 @@ const taskLogsReducer = handleActions<LogsQueryResult>({
     return {
       ...state,
       error: null,
-      workerEntries: action.payload,
+      workerEntries: action.payload || [],
     };
   },
   [TASK_LOGS_ERROR]: (state: LogsQueryResult, action: Action<string>) => {

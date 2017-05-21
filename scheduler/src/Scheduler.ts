@@ -444,11 +444,9 @@ export default class Scheduler {
           if (task.state === RunState.FAILED ||
               task.state === RunState.CANCELLED ||
               task.state === RunState.COMPLETED) {
-            logger.warn(`Task ${jobId}:${taskId} already in state [${RunState[task.state]}].`);
             if (message.type === 'ADDED') {
               // Unstick stuck jobs - this typically happpens when scheduler first comes up.
               jobsToWake.add(task.jobId);
-              // return this.jobQueue.wake(task.jobId, this.shortInterval);
             }
             return;
           }
