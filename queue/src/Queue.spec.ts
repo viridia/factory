@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import * as mocha from 'mocha';
 import { connect } from 'rethinkdb';
 import * as r from 'rethinkdb';
-import { RunState } from '../../common/types/api';
+import { RunState } from '../../common/api';
 import { Job } from './Job';
 import { JobControl } from './JobControl';
 import { Queue } from './Queue';

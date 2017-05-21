@@ -1,4 +1,4 @@
-import { Param, Recipe, Step } from '../types/api';
+import { Param, Recipe, Step } from '../api';
 import ExpressionEvaluator, { Env, Range } from './ExpressionEvaluator';
 import TaskData from './TaskData';
 

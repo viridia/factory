@@ -1,13 +1,15 @@
-import { Job, RunState } from 'api';
+import { Job, ParamType, RunState } from 'api';
 import * as dateformat from 'dateformat';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
 import { JobQueryResult } from '../store/types/JobQueryResult';
+import { RecipeQueryResult } from '../store/types/RecipeQueryResult';
 import './JobDetails.scss';
 
 interface JobsDetailsProps {
   jobs: JobQueryResult;
+  recipes: RecipeQueryResult;
   dispatch: Dispatch<{}>;
 }
 
@@ -63,6 +65,7 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
             <th>Recipe</th>
             <td>{job.recipe}</td>
           </tr>
+          {this.renderJobParams(job)}
           <tr>
             <th>Tasks Completed</th>
             <td>{job.tasksCompleted} / {job.tasksTotal} (
@@ -77,8 +80,31 @@ class JobDetails extends React.Component<JobsDetailsProps, undefined> {
       </table>
     );
   }
+
+  private renderJobParams(job: Job): any {
+    const recipe = this.props.recipes.byId.get(job.recipe);
+    if (recipe === null) {
+      console.error(`recipe: ${job.recipe} not found.`);
+      return null;
+    }
+    const result: any[] = [];
+    for (const param of recipe.params) {
+      const value: any = job.submissionParams[param.id];
+      switch (param.type) {
+        case ParamType[ParamType.RANGE]:
+          result.push((
+            <tr key={param.id}>
+              <th>{param.title}</th>
+              <td>Start: {value[0]}, End: {value[1]}, Step: {value[2] || 1}</td>
+            </tr>
+          ));
+          break;
+      }
+    }
+    return result;
+  }
 }
 
 export default connect(
-  state => ({ jobs: state.jobs }),
+  state => ({ jobs: state.jobs, recipes: state.recipes }),
 )(JobDetails);

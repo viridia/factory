@@ -1,9 +1,11 @@
 import * as React from 'react';
-import { Button, FormControl } from 'react-bootstrap';
+import { Button, Dropdown, FormControl, MenuItem } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
 import { create } from '../store/createJobStatusReducer';
+import { fetchRecipes } from '../store/recipesReducer';
 import { CreateJobStatus } from '../store/types/CreateJobStatus';
+import { RecipeQueryResult } from '../store/types/RecipeQueryResult';
 import './JobEntryForm.scss';
 
 // Props passed in from parent component
@@ -14,6 +16,7 @@ interface DispatchProps {
 // Props after being transformed by connect().
 interface MappedProps {
   createJobStatus: CreateJobStatus;
+  recipes: RecipeQueryResult;
   dispatch: Dispatch<{}>;
 }
 
@@ -33,14 +36,23 @@ class JobEntryForm extends React.Component<MappedProps, State> {
       startFrame: '1',
       endFrame: '10',
     };
-    this.onChangeRecipe = this.onChangeRecipe.bind(this);
+    this.onSelectRecipe = this.onSelectRecipe.bind(this);
     this.onChangeInputFile = this.onChangeInputFile.bind(this);
     this.onChangeStartFrame = this.onChangeStartFrame.bind(this);
     this.onChangeEndFrame = this.onChangeEndFrame.bind(this);
     this.onSubmitJob = this.onSubmitJob.bind(this);
   }
 
+  public componentWillMount() {
+    const { dispatch, recipes } = this.props;
+    if (!recipes.loaded) {
+      dispatch(fetchRecipes());
+    }
+  }
+
   public render() {
+    const { recipes } = this.props;
+    const { recipe } = this.state;
     const { busy, error } = this.props.createJobStatus;
     const frameRange = this.frameRange();
     const disabled = (busy
@@ -59,14 +71,14 @@ class JobEntryForm extends React.Component<MappedProps, State> {
             readOnly={true}
         />
         Recipe:
-        <FormControl
-            className="recipe"
-            type="text"
-            value={this.state.recipe}
-            disabled={busy}
-            placeholder="recipe"
-            onChange={this.onChangeRecipe}
-        />
+        <Dropdown id="recipe-selector" dropup={true} onSelect={this.onSelectRecipe}>
+          <Dropdown.Toggle>
+            {recipe}
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            {recipes.list.map(id => <MenuItem eventKey={id}>{id}</MenuItem>)}
+          </Dropdown.Menu>
+        </Dropdown>
         File:
         <FormControl
             className="input-file"
@@ -99,8 +111,8 @@ class JobEntryForm extends React.Component<MappedProps, State> {
     );
   }
 
-  private onChangeRecipe(e: any) {
-    this.setState({ recipe: e.target.value });
+  private onSelectRecipe(eventKey: any) {
+    this.setState({ recipe: eventKey });
   }
 
   private onChangeInputFile(e: any) {
@@ -140,5 +152,9 @@ class JobEntryForm extends React.Component<MappedProps, State> {
 }
 
 export default connect<DispatchProps, MappedProps, any>(
-  (state, ownProps) => ({ ...ownProps, createJobStatus: state.createJobStatus }),
+  (state, ownProps) => ({
+    ...ownProps,
+    createJobStatus: state.createJobStatus,
+    recipes: state.recipes,
+  }),
 )(JobEntryForm);

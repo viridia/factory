@@ -6,8 +6,8 @@ import * as http from 'http';
 import Service from '../../common/k8/Service';
 import {
   Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
-} from '../../common/types/api';
-import { JobRecord, TaskRecord } from '../../common/types/queue';
+} from '../../common/api';
+import { JobRecord, TaskRecord } from '../../common/queue';
 import { JobControl, Queue } from '../../queue';
 import { logger } from './logger';
 import { ajv, loadSchema } from './schemas';

@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as r from 'rethinkdb';
 import { connect, Connection, Db } from 'rethinkdb';
 import { ensureDbsExist, ensureTablesExist } from '../../common/db/util';
-import { JobRecord, TaskRecord } from '../../common/types/queue';
+import { JobRecord, TaskRecord } from '../../common/queue';
 import * as queue from '../../queue';
 import ConfigRoutes from './ConfigRoutes';
 import JobRoutes from './JobRoutes';
@@ -24,7 +24,12 @@ export default class App {
   private taskQueue: queue.Queue<TaskRecord>;
   private db: Db;
 
-  constructor() {
+  /** Construct an instance of App.
+      @param deepstream An instance of a deepstream.io client. This should be null except in
+          test environments whre you want to substitute a mock implementation.
+  */
+  constructor(deepstream: deepstreamIO.Client = null) {
+    this.deepstream = deepstream;
     this.express = express();
     this.ready = this.init(); // Asynchronous initialization.
   }

@@ -6,7 +6,7 @@
     {
       "id": "frames",
       "title": "Frames",
-      "type": "range",
+      "type": "RANGE",
       "default": [1, 1]
     }
   ],

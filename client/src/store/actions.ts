@@ -13,6 +13,9 @@ import {
   JOBS_LIST_RECEIVED,
   JOBS_LIST_REQUESTED,
   JOBS_UPDATED,
+  RECIPES_LIST_ERROR,
+  RECIPES_LIST_RECEIVED,
+  RECIPES_LIST_REQUESTED,
   SELECT_JOB,
   SELECT_TASK,
   SET_ACTIVE_SUBSCRIPTIONS,
@@ -37,10 +40,13 @@ export const jobsDeleted = createAction<string[]>(JOBS_DELETED);
 export const jobsUpdated = createAction<Job[]>(JOBS_UPDATED);
 export const jobsListRequested = createAction<undefined>(JOBS_LIST_REQUESTED);
 export const jobsListReceived = createAction<undefined>(JOBS_LIST_RECEIVED);
-export const jobsListError = createAction<undefined>(JOB_LOGS_ERROR);
+export const jobsListError = createAction<undefined>(JOBS_LIST_ERROR);
 export const jobsLogsRequested = createAction<undefined>(JOB_LOGS_REQUESTED);
 export const jobsLogsReceived = createAction<undefined>(JOB_LOGS_RECEIVED);
 export const jobsLogsError = createAction<undefined>(JOBS_LIST_ERROR);
+export const recipesListRequested = createAction<undefined>(RECIPES_LIST_REQUESTED);
+export const recipesListReceived = createAction<undefined>(RECIPES_LIST_RECEIVED);
+export const recipesListError = createAction<undefined>(RECIPES_LIST_ERROR);
 export const selectJob = createAction<string>(SELECT_JOB);
 export const selectTask = createAction<string>(SELECT_TASK);
 export const setActiveSubscriptions = createAction<undefined>(SET_ACTIVE_SUBSCRIPTIONS);

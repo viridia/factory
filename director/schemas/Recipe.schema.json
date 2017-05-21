@@ -35,15 +35,15 @@
             "description": "Data-type of the parameter.",
             "type": "string",
             "enum": [
-              "boolean",
-              "integer",
-              "number",
-              "range",
-              "string",
-              "ident",
-              "filename",
-              "filepath",
-              "dirpath"
+              "BOOLEAN",
+              "INTEGER",
+              "NUMBER",
+              "RANGE",
+              "STRING",
+              "IDENT",
+              "FILENAME",
+              "FILEPATH",
+              "DIRPATH"
             ]
           },
           "default": {

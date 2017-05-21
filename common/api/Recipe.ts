@@ -22,7 +22,7 @@ export enum ParamType {
 export interface Param {
   id: string;
   title: string;
-  type: ParamType;
+  type: string;
   default?: any;
 }
 

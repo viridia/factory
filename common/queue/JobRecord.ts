@@ -1,4 +1,4 @@
-import * as queue from '../../../queue';
+import * as queue from '../../queue';
 import { Job, RunState } from '../api';
 
 /** Data structure of a Job as it is stored in the database. */

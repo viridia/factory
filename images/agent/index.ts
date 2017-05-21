@@ -1,7 +1,7 @@
 import * as r from 'rethinkdb';
 import { connect, Connection, Db } from 'rethinkdb';
 import { ensureDbsExist, ensureTablesExist } from '../../common/db/util';
-import { TaskRecord } from '../../common/types/queue';
+import { TaskRecord } from '../../common/queue';
 import * as queue from '../../queue';
 
 class Agent {

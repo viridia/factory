@@ -1,11 +1,10 @@
 import * as deepstream from 'deepstream.io-client-js';
 import * as r from 'rethinkdb';
 import { connect, Connection, Db } from 'rethinkdb';
+import { JobChangeNotification, Recipe, RunState } from '../../common/api';
 import { ensureDbsExist, ensureTablesExist } from '../../common/db/util';
+import { JobRecord, TaskRecord } from '../../common/queue';
 import TaskSet from '../../common/recipes/TaskSet';
-import { JobChangeNotification, Recipe } from '../../common/types/api';
-import { RunState } from '../../common/types/api';
-import { JobRecord, TaskRecord } from '../../common/types/queue';
 import { JobControl, Queue } from '../../queue';
 import K8 from './K8';
 import { logger } from './logger';

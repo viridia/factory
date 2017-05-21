@@ -1,4 +1,4 @@
-import { RunState } from '../../common/types/api';
+import { RunState } from '../../common/api';
 
 export interface Job {
   id: string;

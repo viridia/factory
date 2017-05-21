@@ -3,15 +3,14 @@
 ## Components
 
 * Next steps:
-  * non-real-time logging.
   * real-time logging.
 
 Future:
+* Render input params in job details.
 * Improve JSON schema error messages.
 * Number log lines sequentially
 * Configurable concurrency limits.
 * Move logger into common
-* Move types/api into api
 
 Future:
 * Page that shows orphan workers.

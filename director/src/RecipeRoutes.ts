@@ -1,7 +1,8 @@
 import * as Ajv from 'ajv';
 import { NextFunction, Request, Response, Router } from 'express';
 import { Connection, Db } from 'rethinkdb';
-import { Recipe } from '../../common/types/api';
+import { Recipe } from '../../common/api';
+import { logger } from './logger';
 import { ajv, loadSchema } from './schemas';
 
 /** Defines routes for creating and monitoring jobs and tasks. */
@@ -31,8 +32,28 @@ export default class JobRoutes {
     this.router.get('/', this.queryRecipes.bind(this));
   }
 
+  private queryRecipes(req: Request, res: Response, next: NextFunction): void {
+    logger.info('Query recipes.');
+    this.db.table('Recipes').run(this.conn).then(cursor => {
+      cursor.toArray().then(recipes => {
+        res.json(recipes);
+      });
+    }, (error: Error) => {
+      res.status(500).json({ error: 'internal', message: error.message });
+    });
+  }
+
   private getRecipe(req: Request, res: Response, next: NextFunction): void {
-    // res.json({ message: `requesting job ${req.params.id}.` });
+    logger.info('Query recipe:', req.params.id);
+    this.db.table('Recipes').get(req.params.id).run(this.conn).then(recipe => {
+      if (recipe === null) {
+        res.status(404).json({ error: 'not-found' });
+      } else {
+        res.json(recipe);
+      }
+    }, (error: Error) => {
+      res.status(500).json({ error: 'internal', message: error.message });
+    });
   }
 
   private patchRecipe(req: Request, res: Response, next: NextFunction): void {
@@ -44,28 +65,16 @@ export default class JobRoutes {
   }
 
   private deleteRecipe(req: Request, res: Response, next: NextFunction): void {
-    // console.info('Attempting to delete recipe:', req.params.id);
-    // this.jobQueue.cancelRecipe(req.params.id).then(jobs => {
-    //   // const job = jobs[0];
-    //   // console.info('Cancellation successful:', job);
-    //   // this.deepstream.event.emit(`jobs.project.${job.project}`,
-    //   //   { jobsUpdated: [this.serializeRecipe(job)] });
-    //   res.end();
-    // }, (error: any) => {
-    //   console.error(error);
-    //   res.status(500).json({ message: error.message });
-    // });
-  }
-
-  private queryRecipes(req: Request, res: Response, next: NextFunction): void {
-    // this.jobQueue.findRecipe({
-    //   user: req.query.user,
-    //   project: req.query.project,
-    // }).then(jobList => {
-    //   res.json(jobList.map(this.serializeRecipe));
-    // }, error => {
-    //   console.error(error);
-    // });
+    logger.info('Delete recipe:', req.params.id);
+    this.db.table('Recipes').get(req.params.id).delete().run(this.conn).then(result => {
+      if (result.deleted === 0) {
+        res.status(404).json({ error: 'not-found' });
+      } else {
+        res.end();
+      }
+    }, (error: Error) => {
+      res.status(500).json({ error: 'internal', message: error.message });
+    });
   }
 
   private putRecipe(req: Request, res: Response, next: NextFunction): void {

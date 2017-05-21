@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { ChangesOptions, Connection, Cursor, Db, now, Table } from 'rethinkdb';
 import * as r from 'rethinkdb';
-import { RunState } from '../../common/types/api';
+import { RunState } from '../../common/api';
 import { Clock } from './Clock';
 import { Job } from './Job';
 import { JobControl } from './JobControl';

@@ -1,4 +1,4 @@
-import { RunState } from '../../common/types/api';
+import { RunState } from '../../common/api';
 import { Job } from './Job';
 import { Logger } from './Logger';
 import { Queue } from './Queue';

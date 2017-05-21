@@ -35,6 +35,9 @@ class JobList extends React.Component<MappedProps, undefined> {
 
   public componentWillMount() {
     const { jobs, dispatch } = this.props;
+    const projectIds = Immutable.Set<number>(jobs.byProject.keySeq());
+    const currentProject = 10; // Also watch for new jobs in current project.
+    dispatch(updateProjectSubscriptions(projectIds.add(currentProject)));
     dispatch(fetchJobs());
   }
 

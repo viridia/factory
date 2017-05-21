@@ -5,6 +5,7 @@ export { JobChangeNotification } from './JobChangeNotification';
 export { JobRequest } from './JobRequest';
 export { JobQuery } from './JobQuery';
 export { LogEntry } from './LogEntry';
-export { Recipe, Param, Step } from './Recipe';
+export { Recipe, Param, ParamType, Step } from './Recipe';
 export { Task } from './Task';
+export { RecipeQuery } from './RecipeQuery';
 export { RunState } from './RunState';

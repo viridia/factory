@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
 import Service from '../../common/k8/Service';
-import { TaskRecord } from '../../common/types/queue';
+import { TaskRecord } from '../../common/queue';
 import { logger } from './logger';
 
 const JOBS_PATH = '/apis/batch/v1/namespaces/default/jobs';
