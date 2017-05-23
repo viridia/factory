@@ -15,7 +15,7 @@ RUN mkdir -p ${SANDBOX}
 ADD images/mandelbrot/mandelbrot.go ${WORK}/
 run go build mandelbrot.go
 
-ADD start.sh ${WORK}/
+ADD images/mandelbrot/start.sh ${WORK}/
 run chmod a+x start.sh
 
 # Run the command

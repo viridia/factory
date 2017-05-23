@@ -3,10 +3,10 @@ import Axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as deepstream from 'deepstream.io-client-js';
 import { NextFunction, Request, Response, Router } from 'express';
 import * as http from 'http';
-import Service from '../../common/k8/Service';
 import {
   Job, JobChangeNotification, JobChangeRequest, JobRequest, LogEntry, RunState, Task,
 } from '../../common/api';
+import Service from '../../common/k8/Service';
 import { JobRecord, TaskRecord } from '../../common/queue';
 import { JobControl, Queue } from '../../queue';
 import { logger } from './logger';

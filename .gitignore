@@ -3,3 +3,4 @@ node_modules/
 /client/src/api
 /sandbox
 *.pid
+.DS_Store

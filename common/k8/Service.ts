@@ -1,6 +1,5 @@
 import Axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig, AxiosResponse } from 'axios';
 import * as fs from 'fs';
-import * as qs from 'qs';
 
 /** Class to talk to Kubernetes Service API. Sort of like Axios but handles K8 certs and
     streaming. */
