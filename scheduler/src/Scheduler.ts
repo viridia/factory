@@ -179,7 +179,7 @@ export default class Scheduler {
   }
 
   private updateJobStatus(job: JobRecord, jobControl: JobControl<JobRecord>) {
-    logger.debug(`Updating job status: ${job.id} [${RunState[job.state]}]`);
+    // logger.debug(`Updating job status: ${job.id} [${RunState[job.state]}]`);
     const later = new Date(Date.now() + this.longInterval);
     let workTotal = 0;
     let workCompleted = 0;
@@ -226,7 +226,7 @@ export default class Scheduler {
                   'it depends on a task which was also cancelled.');
               taskControl.log.warning('Task cancelled because a task it depends on was cancelled.');
               jobControl.log.warning(
-                  `Task '${task.taskId}' cancelled because a task it depends on was cancelled.`);
+                  `Task [${task.taskId}] cancelled because a task it depends on was cancelled.`);
               taskControl.cancel();
               cancelledTasks.push(task.id);
               taskChangedMap[task.taskId] = task;
@@ -236,7 +236,7 @@ export default class Scheduler {
                   'because it depends on a task which also failed.');
               taskControl.log.warning('Task failed because a task it depends on failed.');
               jobControl.log.warning(
-                  `Task '${task.taskId}' failed because a task it depends on failed.`);
+                  `Task [${task.taskId}] failed because a task it depends on failed.`);
               // console.log('dep counts:', depCounts);
               taskControl.fail();
               failedTasks.push(task.id);
@@ -247,7 +247,7 @@ export default class Scheduler {
               // All dependencies completed.
               logger.info(`Task ${task.jobId}:${task.taskId} dependencies satsfied.`);
               taskControl.log.info('Task dependencies satisfied; task is ready to run.');
-              jobControl.log.info(`Task '${task.taskId}' dependencies satisfied, task is ready.`);
+              jobControl.log.info(`Task [${task.taskId}] dependencies satisfied, task is ready.`);
               taskControl.setState(RunState.READY).reschedule(this.shortInterval);
               runningTasks.push(task.id);
               taskChangedMap[task.taskId] = task;
@@ -387,8 +387,8 @@ export default class Scheduler {
   }
 
   private updateTaskStatus(task: TaskRecord, taskControl: JobControl<TaskRecord>) {
-    logger.debug(
-        `Updating status for Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
+    // logger.debug(
+    //     `Updating status for Task: ${task.jobId}:${task.taskId} [${RunState[task.state]}].`);
     if (task.k8Link) {
       this.k8.getJobStatus(task).then(resp => {
         if (resp.status.succeeded) {
@@ -424,7 +424,7 @@ export default class Scheduler {
       task: TaskRecord, taskControl: JobControl<TaskRecord>, jobControl: JobControl<JobRecord>) {
     logger.warn(`Task ${task.jobId}:${task.taskId} cancelled.`);
     taskControl.log.warning('Task cancelled.');
-    jobControl.log.warning(`Task '${task.taskId}' cancelled.`);
+    jobControl.log.warning(`Task [${task.taskId}] cancelled.`);
     taskControl.cancel();
   }
 
@@ -466,6 +466,19 @@ export default class Scheduler {
             jobsToWake.add(task.jobId);
             return this.onWorkerFailed(task, taskControl);
           } else if (this.isComplete(jobMessage)) {
+            // console.log(JSON.stringify(jobMessage, null, 2));
+            // this.k8.getPodStatus(jobMessage.metadata.name).then(pod => {
+            //   console.log(JSON.stringify(pod, null, 2));
+            //   // console.log(`${pod.metadata.name}/worker`);
+            //   this.k8.get(
+          //     `/api/v1/proxy/nodes/${pod.spec.nodeName}:10255/stats/${pod.metadata.name}/worker`)
+            //   .then(resp => {
+            //     console.log(JSON.stringify(resp.data, null, 2));
+            //   }, error => {
+            //     logger.error(error);
+            //   });
+// /<podName>/<containerName>
+            // });
             jobsToWake.add(task.jobId);
             return this.onWorkerSucceeded(task, taskControl);
           } else {

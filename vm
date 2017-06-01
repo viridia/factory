@@ -8,18 +8,23 @@ usage() {
   echo "Valid commands are:"
   echo "  mount - mount the project directory into the minikube vm."
   echo "  unmount - unmount the project directory from the minikube vm."
-  echo "  start - start the k8shell container."
-  echo "  stop - stop the k8shell container."
-  echo "  shell - open a shell into the development container."
+  echo "  proxy start - start the proxy to the Kubernetes control port."
+  echo "  proxy stop - stop the proxy to the Kubernetes control port."
   echo "  client (build|up|down|replace) - start / stop the client server."
   echo "  db (up|down|replace) - start / stop the database."
   echo "  director (build|up|down|replace) - start / stop the director."
   echo "  ds (up|down|replace) - start / stop the deepstream router."
   echo "  ingress (up|down|replace) - start / stop the ingress."
   echo "  scheduler (build|up|down|replace) - start / stop the scheduler."
-  echo "  proxy start - start the proxy to the Kubernetes control port."
-  echo "  proxy stop - stop the proxy to the Kubernetes control port."
+  echo "  shell - (build|up|down|run) start / stop / run a debug shell in the cluster."
   echo "  prune - delete all factory pods."
+  echo ""
+  echo "Subcommands (for client, db, director, ds, ingress, scheduler, shell):"
+  echo "  build - build the docker image for this system. (client, directory, scheduler, shell)"
+  echo "  up - bring up the service in the cluster."
+  echo "  down - shut down the service in the cluster."
+  echo "  replace - update the service configuration (may or may not work depending on changes)."
+  echo "  run - exec a shell into the container (shell only)."
   exit 1
 }
 
@@ -73,22 +78,32 @@ case $1 in
     fi
     ;;
 
-  start)
-    kubectl create -f "$BASEDIR/config/k8shell.yml"
-    ;;
-
-  stop)
-    kubectl delete -f "$BASEDIR/config/k8shell.yml"
-    echo "Waiting for pod to terminate..."
-    kubectl get pod k8shell > /dev/null 2> /dev/null
-    while [ $? -eq 0 ]; do
-      sleep 3
-      kubectl get pod k8shell > /dev/null 2> /dev/null
-    done
-    ;;
-
   shell)
-    kubectl exec -it k8shell -- /bin/bash
+    case $2 in
+      start)
+        kubectl create -f "$BASEDIR/config/k8shell.yml"
+        ;;
+
+      stop)
+        kubectl delete -f "$BASEDIR/config/k8shell.yml"
+        echo "Waiting for pod to terminate..."
+        kubectl get pod k8shell > /dev/null 2> /dev/null
+        while [ $? -eq 0 ]; do
+          sleep 3
+          kubectl get pod k8shell > /dev/null 2> /dev/null
+        done
+        ;;
+
+      run)
+        kubectl exec -it k8shell -- /bin/bash
+        ;;
+
+      *)
+        echo "unrecognized shell option: '$2'"
+        usage
+        exit 1
+        ;;
+    esac
     ;;
 
   client)

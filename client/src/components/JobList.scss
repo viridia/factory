@@ -22,6 +22,9 @@
       &.selected {
         background-color: #caf7a7;
       }
+      &.waiting .state > .pill {
+        background-color: #bbc;
+      }
       &.ready .state > .pill {
         background-color: #be7;
       }

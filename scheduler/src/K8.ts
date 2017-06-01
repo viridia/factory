@@ -47,7 +47,7 @@ export default class K8 extends Service {
           spec: {
             restartPolicy: 'Never',
             containers: [{
-              name: 'renderer',
+              name: 'worker',
               image: task.image,
               workingDir: task.workdir,
               // command: '',
